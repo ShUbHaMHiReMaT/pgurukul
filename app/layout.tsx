@@ -1,10 +1,11 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'PGURUKUL - Classroom & Department Collaboration',
+  description: 'A secure, lightweight classroom and department collaboration platform combining features of Google Classroom, Discord, and Teams.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -39,9 +40,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">
-        {children}
+    <html lang="en" className="bg-background">
+      <body className="antialiased bg-background text-foreground">
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            {children}
+          </div>
+        </Providers>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
