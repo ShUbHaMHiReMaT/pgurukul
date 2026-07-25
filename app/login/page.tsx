@@ -28,15 +28,16 @@ export default function LoginPage() {
 
       if (!response.ok) {
         setError(data.error || 'Failed to login');
+        setIsLoading(false);
         return;
       }
 
-      // Redirect to dashboard on success
+      // Wait a moment for cookie to be set, then redirect
+      await new Promise(resolve => setTimeout(resolve, 500));
       router.push('/dashboard');
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error('[v0] Login error:', err);
-    } finally {
       setIsLoading(false);
     }
   }
