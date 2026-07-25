@@ -15,16 +15,13 @@ const protectedRoutes = [
 // Public routes
 const publicRoutes = ["/", "/login", "/signup", "/api/auth"];
 
-export function middleware(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if route is protected
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
-
-  // Check if route is public
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   // If it's a protected route, check for authentication
   if (isProtectedRoute) {
@@ -38,9 +35,3 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
-  ],
-};
