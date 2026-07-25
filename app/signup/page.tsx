@@ -28,8 +28,11 @@ function SignupContent() {
     }));
   };
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[v0] Signup form submitted');
     setError('');
 
     // Validation
@@ -41,6 +44,7 @@ function SignupContent() {
     setIsLoading(true);
 
     try {
+      console.log('[v0] Sending POST to /api/auth/signup');
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,19 +56,22 @@ function SignupContent() {
         }),
       });
 
+      console.log('[v0] Response status:', response.status);
       const data = await response.json();
+      console.log('[v0] Response data:', data);
 
       if (!response.ok) {
         setError(data.error || 'Failed to create account');
+        setIsLoading(false);
         return;
       }
 
+      console.log('[v0] Signup successful, redirecting to login');
       // Redirect to login on success
       router.push('/login');
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error('[v0] Signup error:', err);
-    } finally {
       setIsLoading(false);
     }
   }
