@@ -25,10 +25,17 @@ export default function DashboardLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Refetch user on mount to ensure cookie is read
+  // Refetch user on mount and redirect if not authenticated
   useEffect(() => {
     refetch();
   }, [refetch]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/login');
+    }
+  }, [isLoading, user, router]);
 
   if (isLoading) {
     return (
@@ -42,7 +49,6 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    router.push('/login');
     return null;
   }
 
