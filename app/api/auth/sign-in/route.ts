@@ -5,8 +5,10 @@ import { mockUsers } from "@/lib/mock-data";
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
+    console.log('[v0] Sign-in attempt:', { email });
 
     if (!email || !password) {
+      console.log('[v0] Missing email or password');
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
     const user = mockUsers.find(u => u.email === email);
 
     if (!user) {
+      console.log('[v0] User not found:', email);
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -25,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Verify password (in development, just check if it matches)
     if (user.password !== password) {
+      console.log('[v0] Password mismatch for:', email);
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -40,6 +44,7 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
+    console.log('[v0] Sign-in successful:', { userId: user.id, email });
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json({
       success: true,
