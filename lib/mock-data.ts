@@ -9,7 +9,7 @@ export const mockUsers = [
     role: 'super_admin',
     departmentId: 'dept-1',
     avatarUrl: '',
-    password: 'password123',
+    password: 'password123', // Demo password
   },
   {
     id: 'user-2',
@@ -19,7 +19,7 @@ export const mockUsers = [
     role: 'department_lead',
     departmentId: 'dept-1',
     avatarUrl: '',
-    password: 'password123',
+    password: 'password123', // Demo password
   },
   {
     id: 'user-3',
@@ -29,7 +29,7 @@ export const mockUsers = [
     role: 'intern',
     departmentId: 'dept-1',
     avatarUrl: '',
-    password: 'password123',
+    password: 'password123', // Demo password
   },
 ];
 

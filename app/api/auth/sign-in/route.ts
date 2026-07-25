@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password (in development, just check if it matches)
+    console.log('[v0] Password check - stored:', user.password, 'provided:', password, 'match:', user.password === password);
     if (user.password !== password) {
       console.log('[v0] Password mismatch for:', email);
       return NextResponse.json(
