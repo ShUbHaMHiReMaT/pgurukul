@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Clear session cookie
-    response.cookies.set("auth_session", "", {
+    // Clear user_id cookie
+    response.cookies.set("user_id", "", {
       maxAge: 0,
       httpOnly: true,
       sameSite: "lax",
