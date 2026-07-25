@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { users, departments } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-import { validatePassword, isValidEmail, logActivity } from "@/lib/auth-utils";
+import { isValidEmail } from "@/lib/auth-utils";
 import { v4 as uuidv4 } from "uuid";
-import bcryptjs from "bcryptjs";
+import { mockUsers } from "@/lib/mock-data";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,75 +25,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
+    // Basic password validation (min 6 chars)
+    if (password.length < 6) {
       return NextResponse.json(
-        { error: "Password does not meet requirements", details: passwordValidation.errors },
+        { error: "Password must be at least 6 characters" },
         { status: 400 }
       );
     }
 
-    // Check if email already exists
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-
-    if (existingUser.length > 0) {
+    // Check if email already exists in mock data
+    const existingUser = mockUsers.find(u => u.email === email);
+    if (existingUser) {
       return NextResponse.json(
         { error: "Email already registered" },
         { status: 400 }
       );
     }
 
-    // If inviteCode is provided, validate it and get department
-    let departmentId: string | undefined = undefined;
-
-    if (inviteCode) {
-      const department = await db
-        .select()
-        .from(departments)
-        .where(eq(departments.inviteCode, inviteCode))
-        .limit(1);
-
-      if (department.length === 0) {
-        return NextResponse.json(
-          { error: "Invalid invite code" },
-          { status: 400 }
-        );
-      }
-
-      departmentId = department[0].id;
-    }
-
-    // Hash password
-    const hashedPassword = await bcryptjs.hash(password, 10);
-
-    // Create user
+    // For demo mode, just accept the signup and add to mock data
     const userId = uuidv4();
     const newUser = {
       id: userId,
       email,
       username,
-      passwordHash: hashedPassword,
-      role: departmentId ? "intern" : "super_admin", // First user without code is super admin
-      departmentId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      fullName: username,
+      role: 'intern' as const,
+      departmentId: 'dept-1',
+      avatarUrl: '',
+      password, // Store plaintext in demo mode
     };
 
-    await db.insert(users).values(newUser);
+    // Add to mock users (in memory - will be lost on server restart)
+    mockUsers.push(newUser);
 
-    // Log activity
-    await logActivity(userId, "signup", "user", userId, departmentId);
+    console.log('[v0] User created:', { userId, email, username });
 
     return NextResponse.json(
       {
         success: true,
-        message: "User created successfully",
+        message: "Account created successfully",
         userId,
-        role: newUser.role,
+        user: {
+          id: userId,
+          email,
+          username,
+          role: 'intern',
+        },
       },
       { status: 201 }
     );
