@@ -105,6 +105,27 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
+
+        {/* Demo Credentials */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            Demo Credentials (Development Mode)
+          </p>
+          <div className="space-y-2 text-xs">
+            <div>
+              <p className="font-medium text-foreground">Admin Account</p>
+              <p className="text-muted-foreground">admin@pgurukul.com / password123</p>
+            </div>
+            <div className="pt-2 border-t border-border">
+              <p className="font-medium text-foreground">Department Lead</p>
+              <p className="text-muted-foreground">lead@pgurukul.com / password123</p>
+            </div>
+            <div className="pt-2 border-t border-border">
+              <p className="font-medium text-foreground">Intern</p>
+              <p className="text-muted-foreground">intern@pgurukul.com / password123</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

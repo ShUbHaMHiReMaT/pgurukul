@@ -28,6 +28,29 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
+    // Load mock messages on component mount
+    const loadMessages = async () => {
+      if (!user?.departmentId) return;
+      try {
+        const response = await fetch(`/api/chat/messages-mock?departmentId=${user.departmentId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(data.messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            senderId: msg.senderId,
+            senderName: msg.sender?.username || msg.sender?.fullName || 'Unknown',
+            createdAt: msg.createdAt,
+          })));
+        }
+      } catch (error) {
+        console.error('[v0] Failed to load messages:', error);
+      }
+    };
+    loadMessages();
+  }, [user?.departmentId]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
