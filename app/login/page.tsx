@@ -12,19 +12,25 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[v0] Form submitted with email:', email);
     setError('');
     setIsLoading(true);
 
     try {
+      console.log('[v0] Sending POST to /api/auth/sign-in');
       const response = await fetch('/api/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('[v0] Response status:', response.status);
       const data = await response.json();
+      console.log('[v0] Response data:', data);
 
       if (!response.ok) {
         setError(data.error || 'Failed to login');
@@ -32,6 +38,7 @@ export default function LoginPage() {
         return;
       }
 
+      console.log('[v0] Login successful, redirecting to dashboard');
       // Wait a moment for cookie to be set, then redirect
       await new Promise(resolve => setTimeout(resolve, 500));
       router.push('/dashboard');
