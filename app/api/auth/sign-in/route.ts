@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    let { email, password } = await request.json();
+    email = email?.trim() || '';
+    password = password?.trim() || '';
     console.log('[v0] Sign-in attempt:', { email });
 
     if (!email || !password) {
@@ -17,8 +19,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email
-    const user = mockUsers.find(u => u.email === email);
+    // Find user by email (case-insensitive)
+    const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
     if (!user) {
       console.log('[v0] User not found:', email);

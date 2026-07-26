@@ -38,10 +38,16 @@ export default function LoginPage() {
         return;
       }
 
-      console.log('[v0] Login successful, redirecting to dashboard');
-      // Wait a moment for cookie to be set, then redirect
-      await new Promise(resolve => setTimeout(resolve, 500));
-      router.push('/dashboard');
+      console.log('[v0] Login successful, verifying session');
+      // Verify the cookie was set by calling /api/auth/me
+      const meResponse = await fetch('/api/auth/me');
+      if (meResponse.ok) {
+        console.log('[v0] Session verified, redirecting to dashboard');
+        router.push('/dashboard');
+      } else {
+        setError('Session verification failed. Please try again.');
+        setIsLoading(false);
+      }
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error('[v0] Login error:', err);
