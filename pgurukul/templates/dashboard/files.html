@@ -1,0 +1,205 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Files — {{ dept.name }}{% endblock %}
+{% block page_title %}📁 {{ dept.name }} Files{% endblock %}
+{% block page_subtitle %}{{ files | length }} files in {{ current_folder }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Toolbar ─────────────────────────────────────────────────── -->
+<div class="flex items-center gap-3 mb-6" style="flex-wrap:wrap;">
+  <button class="btn btn-primary" onclick="document.getElementById('upload-zone').classList.toggle('hidden')">
+    ⬆ Upload File
+  </button>
+
+  {% if current_user.is_department_lead or current_user.is_super_admin %}
+  <button class="btn btn-secondary" onclick="openModal('modal-new-folder')">
+    📁 New Folder
+  </button>
+  {% endif %}
+
+  <!-- Search -->
+  <form class="flex gap-2" style="margin-left:auto;" method="GET" action="{{ url_for('files.files_view', dept_id=dept.id) }}">
+    <input type="search" name="q" value="{{ search_query }}" class="form-control" placeholder="Search files…" style="width:220px;"/>
+    <button type="submit" class="btn btn-secondary">🔍</button>
+    {% if search_query %}
+    <a href="{{ url_for('files.files_view', dept_id=dept.id) }}" class="btn btn-ghost">✕</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- ── Upload Zone ─────────────────────────────────────────────── -->
+<div class="card hidden mb-6" id="upload-zone" ondragover="event.preventDefault();this.classList.add('drag-over')"
+     ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+  <div id="drop-area" style="border:2px dashed var(--color-border);border-radius:var(--radius-md);padding:var(--space-10);text-align:center;transition:all var(--transition-fast);">
+    <div style="font-size:3rem;margin-bottom:var(--space-3);">☁️</div>
+    <h3 style="font-size:1.1rem;margin-bottom:var(--space-2);">Drag & Drop files here</h3>
+    <p style="color:var(--color-text-2);font-size:0.875rem;margin-bottom:var(--space-4);">
+      or click to browse · Max 100MB · PDF, DOCX, PPTX, Images, ZIP, CSV, Excel
+    </p>
+    <input type="file" id="file-picker" hidden multiple
+           accept=".pdf,.docx,.doc,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.webp,.zip,.csv,.xlsx,.xls,.txt,.mp4"
+           onchange="handleFileSelect(this.files)"/>
+    <button class="btn btn-primary" onclick="document.getElementById('file-picker').click()">Browse Files</button>
+  </div>
+
+  <!-- Upload queue -->
+  <div id="upload-queue" style="margin-top:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3);"></div>
+</div>
+
+<!-- ── Folders Breadcrumb ──────────────────────────────────────── -->
+<div class="flex items-center gap-2 mb-4" style="font-size:0.875rem;">
+  <a href="{{ url_for('files.files_view', dept_id=dept.id) }}" style="color:var(--color-primary);">📁 All Files</a>
+  {% if current_folder != '/' %}
+  <span style="color:var(--color-text-3);">/</span>
+  <span style="color:var(--color-text-2);">{{ current_folder.lstrip('/') }}</span>
+  {% endif %}
+</div>
+
+<!-- Sub-folders -->
+{% if folders %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--space-3);margin-bottom:var(--space-5);">
+  {% for folder in folders %}
+  <a href="{{ url_for('files.files_view', dept_id=dept.id, folder=folder) }}"
+     class="card card-sm flex items-center gap-3" style="text-decoration:none;transition:all var(--transition-fast);">
+    <span style="font-size:1.5rem;">📁</span>
+    <div>
+      <div style="font-size:0.875rem;font-weight:600;">{{ folder.lstrip('/') }}</div>
+      <div style="font-size:0.7rem;color:var(--color-text-3);">Folder</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Files Grid/List ─────────────────────────────────────────── -->
+{% if files %}
+<div class="card" style="padding:0;">
+  <div class="flex items-center justify-between" style="padding:var(--space-4) var(--space-5);">
+    <h3 style="font-size:0.875rem;font-weight:700;color:var(--color-text-3);">FILES ({{ files|length }})</h3>
+    <div class="flex gap-2">
+      <button class="btn btn-ghost btn-sm" onclick="setView('grid')" id="view-grid">⊞</button>
+      <button class="btn btn-ghost btn-sm" onclick="setView('list')" id="view-list" style="color:var(--color-primary);">☰</button>
+    </div>
+  </div>
+
+  <div id="files-container" class="files-list">
+    {% for file in files %}
+    <div class="file-row" data-file-id="{{ file.id }}" data-file-name="{{ file.name }}">
+      <!-- Icon -->
+      <div class="file-icon" style="font-size:1.75rem;">
+        {% if file.is_image %}🖼️
+        {% elif file.is_pdf %}📄
+        {% elif file.extension in ['docx','doc'] %}📝
+        {% elif file.extension in ['pptx','ppt'] %}📊
+        {% elif file.extension in ['xlsx','xls','csv'] %}📈
+        {% elif file.extension == 'zip' %}🗜️
+        {% elif file.extension in ['mp4','mov'] %}🎥
+        {% else %}📁{% endif %}
+      </div>
+
+      <!-- Name & meta -->
+      <div class="file-info">
+        <div class="file-name" ondblclick="renameFile('{{ file.id }}', '{{ file.name }}')">{{ file.name }}</div>
+        <div class="file-meta">
+          v{{ file.version }} ·
+          {{ file.size_mb }}MB ·
+          by {{ file.uploader.username if file.uploader else 'Unknown' }} ·
+          {{ file.created_at.strftime('%b %d, %Y') }}
+        </div>
+      </div>
+
+      <!-- Version badge -->
+      {% if file.version > 1 %}
+      <span class="badge badge-primary" style="font-size:0.65rem;">v{{ file.version }}</span>
+      {% endif %}
+
+      <!-- Favorite -->
+      <button class="btn btn-ghost btn-icon fav-btn {% if file.is_favorite %}active{% endif %}"
+              onclick="toggleFavorite('{{ file.id }}', this)"
+              title="{{ 'Remove from favorites' if file.is_favorite else 'Add to favorites' }}">
+        {{ '⭐' if file.is_favorite else '☆' }}
+      </button>
+
+      <!-- Actions -->
+      <div class="flex gap-1">
+        <!-- Version history -->
+        <button class="btn btn-ghost btn-sm" onclick="showVersions('{{ file.id }}', '{{ file.name }}')" title="Version history">
+          🕐
+        </button>
+        <!-- Download -->
+        <a href="{{ url_for('files.download', dept_id=dept.id, file_id=file.id) }}"
+           class="btn btn-ghost btn-sm" title="Download">⬇</a>
+        <!-- Rename (lead+admin) -->
+        {% if current_user.is_department_lead or current_user.is_super_admin or file.uploader_id == current_user.id %}
+        <button class="btn btn-ghost btn-sm" onclick="renameFile('{{ file.id }}', '{{ file.name }}')" title="Rename">✏️</button>
+        <button class="btn btn-ghost btn-sm danger" onclick="deleteFile('{{ file.id }}')" title="Delete" style="color:var(--color-danger);">🗑</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon">📂</div>
+  <h3>No files {% if search_query %}matching "{{ search_query }}"{% else %}in this folder{% endif %}</h3>
+  <p>{% if search_query %}Try a different search term{% else %}Upload your first file to get started{% endif %}</p>
+  <button class="btn btn-primary" onclick="document.getElementById('upload-zone').classList.remove('hidden')">⬆ Upload File</button>
+</div>
+{% endif %}
+
+<!-- ── Version History Modal ──────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-versions" onclick="if(event.target===this)closeModal('modal-versions')">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <h3>🕐 Version History</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-versions')">✕</button>
+    </div>
+    <div class="modal-body" id="versions-body">
+      <div style="text-align:center;padding:var(--space-8);"><div class="spinner" style="margin:0 auto;"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Rename modal -->
+<div class="modal-overlay hidden" id="modal-rename" onclick="if(event.target===this)closeModal('modal-rename')">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header"><h3>✏️ Rename File</h3><button class="btn btn-ghost btn-icon" onclick="closeModal('modal-rename')">✕</button></div>
+    <div class="modal-body">
+      <input type="text" id="rename-input" class="form-control" placeholder="New filename"/>
+      <input type="hidden" id="rename-file-id"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rename')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitRename()">Rename</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.files-list { display: flex; flex-direction: column; }
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border-2);
+  transition: background var(--transition-fast);
+}
+.file-row:last-child { border-bottom: none; }
+.file-row:hover { background: var(--color-sidebar-item-hover); }
+.file-icon { flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 0.875rem; font-weight: 600; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.file-meta { font-size: 0.75rem; color: var(--color-text-3); }
+.drag-over { border-color: var(--color-primary) !important; background: rgba(91,94,244,0.05) !important; }
+</style>
+
+<script>
+const DEPT_ID = '{{ dept.id }}';
+const IS_LEAD = {{ 'true' if current_user.is_department_lead or current_user.is_super_admin else 'false' }};
+const CURRENT_FOLDER = '{{ current_folder }}';
+</script>
+<script src="{{ url_for('static', filename='js/files.js') }}"></script>
+{% endblock %}

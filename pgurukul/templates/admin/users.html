@@ -1,0 +1,260 @@
+{% extends "admin/layout.html" %}
+{% block title %}Users{% endblock %}
+{% block page_title %}👥 User Management{% endblock %}
+
+{% block content %}
+
+<!-- Toolbar -->
+<div class="flex items-center gap-3 mb-6" style="flex-wrap:wrap;">
+  <button class="btn btn-primary" onclick="openModal('modal-create-user')">+ Create User</button>
+
+  <!-- Filters -->
+  <form method="GET" action="{{ url_for('admin.users') }}" class="flex gap-2" style="margin-left:auto;flex-wrap:wrap;">
+    <input type="search" name="q" value="{{ search }}" class="form-control" placeholder="Search users…" style="width:200px;"/>
+    <select name="role" class="form-control" style="width:150px;" onchange="this.form.submit()">
+      <option value="all" {% if role_filter=='all' %}selected{% endif %}>All Roles</option>
+      <option value="super_admin" {% if role_filter=='super_admin' %}selected{% endif %}>Super Admin</option>
+      <option value="department_lead" {% if role_filter=='department_lead' %}selected{% endif %}>Dept Lead</option>
+      <option value="intern" {% if role_filter=='intern' %}selected{% endif %}>Intern</option>
+    </select>
+    <select name="dept" class="form-control" style="width:160px;" onchange="this.form.submit()">
+      <option value="all" {% if dept_filter=='all' %}selected{% endif %}>All Departments</option>
+      {% for dept in departments %}
+      <option value="{{ dept.id }}" {% if dept_filter==dept.id %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-secondary">🔍</button>
+  </form>
+</div>
+
+<!-- Users Table -->
+<div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Role</th>
+        <th>Department</th>
+        <th>Status</th>
+        <th>Joined</th>
+        <th>Last Seen</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr id="user-row-{{ user.id }}">
+        <td>
+          <div class="flex items-center gap-2">
+            <div class="avatar avatar-sm">{{ (user.display_name or user.username)[0].upper() }}</div>
+            <div>
+              <div style="font-weight:600;font-size:0.875rem;">{{ user.display_name or user.username }}</div>
+              <div style="font-size:0.75rem;color:var(--color-text-3);">{{ user.email }}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="badge {% if user.role == 'super_admin' %}badge-danger{% elif user.role == 'department_lead' %}badge-primary{% else %}badge-neutral{% endif %}">
+            {{ user.role.replace('_', ' ') }}
+          </span>
+        </td>
+        <td>{{ user.department.name if user.department else '-' }}</td>
+        <td>
+          <span class="badge {% if user.is_active %}badge-success{% else %}badge-danger{% endif %}">
+            {% if not user.is_active %}Inactive{% elif user.is_locked %}Locked{% else %}Active{% endif %}
+          </span>
+        </td>
+        <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
+        <td>{{ user.last_seen_at.strftime('%b %d, %H:%M') if user.last_seen_at else 'Never' }}</td>
+        <td>
+          <div class="flex gap-1">
+            <button class="btn btn-ghost btn-sm" onclick="editUser('{{ user.id }}', '{{ user.role }}', '{{ user.department.id if user.department else '' }}')" title="Edit">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetPwd('{{ user.id }}')" title="Reset password">🔐</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleLock('{{ user.id }}')" title="{{ 'Unlock' if user.is_locked else 'Lock' }}">{{ '🔓' if user.is_locked else '🔒' }}</button>
+            {% if user.id != current_user.id %}
+            <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="deleteUser('{{ user.id }}', '{{ user.username }}')" title="Delete">🗑</button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--color-text-3);">No users found</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal-overlay hidden" id="modal-create-user" onclick="if(event.target===this)closeModal('modal-create-user')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>+ Create User</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-create-user')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);">
+        <div class="form-group">
+          <label class="form-label">Username *</label>
+          <input type="text" id="cu-username" class="form-control" placeholder="john_doe"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" id="cu-email" class="form-control" placeholder="john@org.com"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password (leave blank for ChangeMe@123)</label>
+        <input type="text" id="cu-password" class="form-control" placeholder="Temporary password"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);">
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select id="cu-role" class="form-control">
+            <option value="intern">Intern</option>
+            <option value="department_lead">Department Lead</option>
+            <option value="super_admin">Super Admin</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <select id="cu-dept" class="form-control">
+            <option value="">No Department</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-create-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="createUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay hidden" id="modal-edit-user" onclick="if(event.target===this)closeModal('modal-edit-user')">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>✏️ Edit User</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-edit-user')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+      <input type="hidden" id="eu-id"/>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <select id="eu-role" class="form-control">
+          <option value="intern">Intern</option>
+          <option value="department_lead">Department Lead</option>
+          <option value="super_admin">Super Admin</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <select id="eu-dept" class="form-control">
+          <option value="">No Department</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}">{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEditUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay hidden" id="modal-reset-pwd" onclick="if(event.target===this)closeModal('modal-reset-pwd')">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>🔐 Reset Password</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-reset-pwd')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rp-id"/>
+      <div class="form-group">
+        <label class="form-label">New Password *</label>
+        <input type="text" id="rp-password" class="form-control" placeholder="New password"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reset-pwd')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitResetPwd()">Reset Password</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function createUser() {
+  const username = document.getElementById('cu-username').value.trim();
+  const email = document.getElementById('cu-email').value.trim();
+  const password = document.getElementById('cu-password').value;
+  const role = document.getElementById('cu-role').value;
+  const department_id = document.getElementById('cu-dept').value;
+  if (!username || !email) return showToast('Username and email required', 'error');
+  const r = await apiFetch('/admin/users/create', {
+    method: 'POST',
+    body: JSON.stringify({ username, email, password, role, department_id: department_id || null }),
+  });
+  if (r.user) { showToast('User created!', 'success'); location.reload(); }
+  else showToast(r.error || 'Failed', 'error');
+}
+
+function editUser(id, role, deptId) {
+  document.getElementById('eu-id').value = id;
+  document.getElementById('eu-role').value = role;
+  document.getElementById('eu-dept').value = deptId;
+  openModal('modal-edit-user');
+}
+
+async function submitEditUser() {
+  const id = document.getElementById('eu-id').value;
+  const role = document.getElementById('eu-role').value;
+  const department_id = document.getElementById('eu-dept').value;
+  const r = await apiFetch(`/admin/users/${id}/update`, {
+    method: 'POST',
+    body: JSON.stringify({ role, department_id: department_id || null }),
+  });
+  if (r.user) { showToast('Updated!', 'success'); closeModal('modal-edit-user'); location.reload(); }
+  else showToast(r.error || 'Failed', 'error');
+}
+
+function resetPwd(id) {
+  document.getElementById('rp-id').value = id;
+  openModal('modal-reset-pwd');
+}
+
+async function submitResetPwd() {
+  const id = document.getElementById('rp-id').value;
+  const new_password = document.getElementById('rp-password').value;
+  if (!new_password) return showToast('Password required', 'error');
+  const r = await apiFetch(`/admin/users/${id}/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ new_password }),
+  });
+  if (r.ok) { showToast('Password reset!', 'success'); closeModal('modal-reset-pwd'); }
+  else showToast(r.error || 'Failed', 'error');
+}
+
+async function toggleLock(id) {
+  const r = await apiFetch(`/admin/users/${id}/toggle-lock`, { method: 'POST' });
+  if (r.is_locked !== undefined) {
+    showToast(r.is_locked ? 'Account locked' : 'Account unlocked', 'success');
+    setTimeout(() => location.reload(), 600);
+  }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+  const r = await apiFetch(`/admin/users/${id}/delete`, { method: 'POST' });
+  if (r.ok) {
+    document.getElementById(`user-row-${id}`)?.remove();
+    showToast('User deleted', 'success');
+  } else showToast(r.error || 'Failed', 'error');
+}
+</script>
+{% endblock %}

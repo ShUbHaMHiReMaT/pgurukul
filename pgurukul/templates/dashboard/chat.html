@@ -1,0 +1,187 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Chat — {{ dept.name }}{% endblock %}
+{% block page_title %}💬 {{ dept.name }} Chat{% endblock %}
+{% block page_subtitle %}{{ dept.members | length }} members{% endblock %}
+{% block dashboard_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="chat-shell" style="height:calc(100vh - 65px);margin:-24px;">
+  <!-- Main Chat -->
+  <div class="chat-main">
+
+    <!-- Pinned Messages -->
+    {% for msg in pinned %}
+    <div class="pinned-bar">
+      <span class="pin-icon">📌</span>
+      <span class="pinned-sender">{{ msg.sender.username }}</span>
+      <span class="pinned-preview">{{ msg.content[:80] }}</span>
+    </div>
+    {% endfor %}
+
+    <!-- Messages Area -->
+    <div class="chat-messages" id="chat-messages">
+
+      <!-- Initial load of messages from server -->
+      {% for msg in messages %}
+      <div class="message-group {% if not loop.first and messages[loop.index0-1].sender_id == msg.sender_id %}continued{% endif %}"
+           data-msg-id="{{ msg.id }}" data-sender-id="{{ msg.sender_id }}">
+
+        <!-- Reply preview -->
+        {% if msg.parent %}
+        <div class="reply-preview" onclick="scrollToMessage('{{ msg.parent_id }}')">
+          <div class="reply-preview-sender">↩ {{ msg.parent.sender.username if msg.parent.sender }}</div>
+          {{ msg.parent.content[:100] if not msg.parent.is_deleted else '[Deleted]' }}
+        </div>
+        {% endif %}
+
+        <div class="message-avatar-col">
+          <div class="avatar avatar-sm">
+            {% if msg.sender and msg.sender.avatar_url %}
+            <img src="{{ msg.sender.avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+            {% else %}
+            {{ (msg.sender.username[0].upper() if msg.sender else '?') }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="message-body">
+          <div class="message-meta">
+            <span class="message-sender">{{ msg.sender.display_name or msg.sender.username if msg.sender else 'Unknown' }}</span>
+            <span class="message-time">{{ msg.created_at.strftime('%I:%M %p') }}</span>
+            {% if msg.is_pinned %}<span style="font-size:0.7rem;">📌</span>{% endif %}
+          </div>
+
+          {% if msg.is_deleted %}
+          <div class="message-content" style="color:var(--color-text-3);font-style:italic;">This message was deleted</div>
+          {% elif msg.message_type == 'file' %}
+          <a href="{{ msg.file_url }}" class="file-message" target="_blank">
+            <div class="file-icon-box">📎</div>
+            <div>
+              <div class="file-msg-name">{{ msg.file_name }}</div>
+              <div class="file-msg-size">Click to download</div>
+            </div>
+          </a>
+          {% elif msg.message_type == 'image' %}
+          <img src="{{ msg.file_url }}" class="chat-image" alt="{{ msg.file_name }}" onclick="openLightbox(this.src)"/>
+          {% else %}
+          <div class="message-content">{{ msg.content | replace('@', '<span class="mention">@') | replace(' ', '</span> ') | safe if '@' in msg.content else msg.content }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Actions (shown on hover) -->
+        {% if not msg.is_deleted %}
+        <div class="message-actions">
+          <button class="msg-action-btn" onclick="replyTo('{{ msg.id }}', '{{ msg.sender.username if msg.sender else '' }}')" title="Reply">↩</button>
+          {% if current_user.is_super_admin or current_user.is_department_lead %}
+          <button class="msg-action-btn" onclick="pinMessage('{{ msg.id }}')" title="{{ 'Unpin' if msg.is_pinned else 'Pin' }}">📌</button>
+          {% endif %}
+          {% if msg.sender_id == current_user.id or current_user.is_super_admin or current_user.is_department_lead %}
+          <button class="msg-action-btn danger" onclick="deleteMessage('{{ msg.id }}')" title="Delete">🗑</button>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <div id="messages-end"></div>
+    </div>
+
+    <!-- Typing indicator -->
+    <div class="typing-indicator" id="typing-indicator" style="display:none;">
+      <div class="typing-dots">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+      <span id="typing-text"></span>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+      <!-- Reply to bar -->
+      <div class="reply-to-bar hidden" id="reply-bar">
+        <span>↩ Replying to </span><strong id="reply-username"></strong>
+        <span class="reply-to-cancel" onclick="cancelReply()">✕</span>
+      </div>
+
+      <!-- @Mention popup -->
+      <div class="mention-popup hidden" id="mention-popup"></div>
+
+      <div class="chat-input-row">
+        <!-- Attach file -->
+        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('file-input').click()" title="Attach file" type="button" style="flex-shrink:0;">
+          📎
+        </button>
+        <input type="file" id="file-input" hidden accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.gif,.zip,.csv,.xlsx"/>
+
+        <textarea
+          class="chat-textarea"
+          id="chat-input"
+          placeholder="Message {{ dept.name }}… (@ to mention)"
+          rows="1"
+          maxlength="5000"
+        ></textarea>
+
+        <button class="chat-send-btn" id="send-btn" onclick="sendMessage()" title="Send message (Enter)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;transform:rotate(90deg);">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div style="font-size:0.7rem;color:var(--color-text-3);margin-top:6px;text-align:center;">
+        Press <kbd style="background:var(--color-border);padding:1px 5px;border-radius:3px;font-size:0.7rem;">Enter</kbd> to send ·
+        <kbd style="background:var(--color-border);padding:1px 5px;border-radius:3px;font-size:0.7rem;">Shift+Enter</kbd> for new line
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Online Users -->
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-heading">🟢 Online Members</div>
+    <div id="online-list">
+      {% for member in members %}
+      <div class="online-member">
+        <div class="avatar-wrap">
+          <div class="avatar avatar-sm">
+            {% if member.avatar_url %}
+            <img src="{{ member.avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+            {% else %}
+            {{ member.username[0].upper() }}
+            {% endif %}
+          </div>
+          {% if member.online %}
+          <div class="online-dot"></div>
+          {% endif %}
+        </div>
+        <div>
+          <div style="font-weight:500;font-size:0.8rem;">{{ member.display_name or member.username }}</div>
+          <div style="font-size:0.7rem;color:{{ 'var(--color-success)' if member.online else 'var(--color-text-3)' }};">
+            {{ 'Online' if member.online else 'Offline' }}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="modal-overlay hidden" id="lightbox" onclick="document.getElementById('lightbox').classList.add('hidden')">
+  <img id="lightbox-img" src="" style="max-width:90vw;max-height:90vh;border-radius:var(--radius-lg);"/>
+</div>
+
+<script>
+  const DEPT_ID = '{{ dept.id }}';
+  const CURRENT_USER = {
+    id: '{{ current_user.id }}',
+    username: '{{ current_user.username }}',
+    display_name: '{{ current_user.display_name or current_user.username }}',
+    is_lead: {{ 'true' if current_user.is_department_lead or current_user.is_super_admin else 'false' }}
+  };
+</script>
+<script src="{{ url_for('static', filename='js/mentions.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

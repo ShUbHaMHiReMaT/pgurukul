@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="PGURUKUL — Secure classroom & department collaboration platform"/>
+  <title>{% block title %}PGURUKUL{% endblock %} | PGURUKUL</title>
+
+  <!-- Preconnect for fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <!-- Core CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"/>
+  {% block extra_css %}{% endblock %}
+
+  <!-- CSRF Token for JS -->
+  <meta name="csrf-token" content="{{ csrf_token() }}"/>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>"/>
+</head>
+<body>
+
+{% block body %}{% endblock %}
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Flash Messages → Toasts -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <script>
+      window._flashMessages = {{ messages | tojson }};
+    </script>
+  {% endif %}
+{% endwith %}
+
+<!-- Core JS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+
+<script>
+  // Display flash messages as toasts
+  if (window._flashMessages) {
+    window._flashMessages.forEach(([cat, msg]) => {
+      const typeMap = {error:'error', danger:'error', success:'success', warning:'warning', info:'info'};
+      showToast(msg, typeMap[cat] || 'info');
+    });
+  }
+</script>
+
+</body>
+</html>

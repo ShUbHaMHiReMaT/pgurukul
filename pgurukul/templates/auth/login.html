@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Sign In{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}"/>
+{% endblock %}
+
+{% block body %}
+<div class="auth-shell">
+  <!-- Animated blobs -->
+  <div class="auth-blob auth-blob-1"></div>
+  <div class="auth-blob auth-blob-2"></div>
+
+  <div class="auth-card">
+    <!-- Logo -->
+    <div class="auth-logo">
+      <div class="auth-logo-icon">PG</div>
+      <div>
+        <div class="auth-logo-text">PGURUKUL</div>
+        <div class="auth-logo-sub">Collaboration Platform</div>
+      </div>
+    </div>
+
+    <h1 class="auth-heading">Welcome back</h1>
+    <p class="auth-sub">Sign in to your department workspace</p>
+
+    <!-- Error -->
+    {% if error %}
+    <div class="auth-error" role="alert">
+      <span>⚠️</span> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Form -->
+    <form class="auth-form" method="POST" action="{{ url_for('auth.login_view') }}" id="login-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email address</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          class="form-control"
+          placeholder="you@organization.com"
+          autocomplete="email"
+          required
+          autofocus
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-group">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+          <button type="button" class="input-toggle-btn" onclick="togglePwd('password')" aria-label="Toggle password">
+            👁
+          </button>
+        </div>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem;cursor:pointer;color:var(--color-text-2);">
+        <input type="checkbox" name="remember" style="accent-color:var(--color-primary)"/>
+        Keep me signed in for 7 days
+      </label>
+
+      <button type="submit" class="btn btn-primary w-full" id="login-btn">
+        <span id="login-btn-text">Sign In →</span>
+        <span id="login-spinner" class="spinner hidden" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></span>
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      New to PGURUKUL? <a href="{{ url_for('auth.signup') }}">Join with invite code</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+document.getElementById('login-form').addEventListener('submit', function() {
+  document.getElementById('login-btn-text').textContent = 'Signing in…';
+  document.getElementById('login-spinner').classList.remove('hidden');
+  document.getElementById('login-btn').disabled = true;
+});
+</script>
+{% endblock %}
