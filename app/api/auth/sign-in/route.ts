@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { mockUsers } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
@@ -40,21 +39,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set cookie with user ID
-    const cookieStore = await cookies();
-    cookieStore.set('user_id', user.id, {
+    const { password: _, ...userWithoutPassword } = user;
+    const response = NextResponse.json({
+      success: true,
+      user: userWithoutPassword,
+    });
+
+    // Set the session cookie on the response and make it available across the
+    // app, including the immediate /api/auth/me request after signing in.
+    response.cookies.set('user_id', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
     console.log('[v0] Sign-in successful:', { userId: user.id, email });
-    const { password: _, ...userWithoutPassword } = user;
-    return NextResponse.json({
-      success: true,
-      user: userWithoutPassword,
-    });
+    return response;
   } catch (error) {
     console.error("[v0] Sign-in error:", error);
     return NextResponse.json(

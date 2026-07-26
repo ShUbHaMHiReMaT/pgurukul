@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/app/providers';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refetch } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -38,16 +40,12 @@ export default function LoginPage() {
         return;
       }
 
-      console.log('[v0] Login successful, verifying session');
-      // Verify the cookie was set by calling /api/auth/me
-      const meResponse = await fetch('/api/auth/me');
-      if (meResponse.ok) {
-        console.log('[v0] Session verified, redirecting to dashboard');
-        router.push('/dashboard');
-      } else {
-        setError('Session verification failed. Please try again.');
-        setIsLoading(false);
-      }
+      console.log('[v0] Login successful, refreshing session');
+      // Refresh the shared auth context before navigating. Without this, the
+      // dashboard guard can see the pre-login `null` user and redirect back.
+      await refetch();
+      console.log('[v0] Session refreshed, redirecting to dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error('[v0] Login error:', err);

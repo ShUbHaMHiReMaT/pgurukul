@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, Trash2, Download } from 'lucide-react';
@@ -10,6 +10,7 @@ export default function FilesPage() {
   const { user } = useAuth();
   const [files, setFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -49,21 +50,25 @@ export default function FilesPage() {
           <h1 className="text-3xl font-bold">Files</h1>
           <p className="text-muted-foreground mt-2">Upload and manage department files</p>
         </div>
-        <label>
-          <Button asChild className="cursor-pointer">
-            <span>
-              <Upload size={20} className="mr-2" />
-              Upload File
-            </span>
+        <div>
+          <Button
+            type="button"
+            className="cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            <Upload size={20} className="mr-2" />
+            {isUploading ? 'Uploading...' : 'Upload File'}
           </Button>
           <input
+            ref={fileInputRef}
             type="file"
             multiple
             onChange={handleFileUpload}
             disabled={isUploading}
             className="hidden"
           />
-        </label>
+        </div>
       </div>
 
       {/* Upload Area */}
