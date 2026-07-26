@@ -21,14 +21,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout, isLoading, refetch } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Refetch user on mount and redirect if not authenticated
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
