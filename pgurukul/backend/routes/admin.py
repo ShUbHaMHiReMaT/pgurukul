@@ -530,4 +530,66 @@ def admin_announcements():
         .order_by(Announcement.created_at.desc())
         .all()
     )
-    return render_template("admin/announcements.html", announcements=announcements)
+    departments = Department.query.filter_by(is_active=True).all()
+    return render_template("admin/announcements.html",
+                           announcements=announcements,
+                           departments=departments)
+
+
+@admin_bp.route("/announcements/create", methods=["POST"])
+def create_admin_announcement():
+    from flask_login import current_user
+    data = request.get_json(silent=True) or {}
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    department_id = data.get("department_id")
+    is_pinned = bool(data.get("is_pinned"))
+    is_global = bool(data.get("is_global", not department_id))
+
+    if not title or not content:
+        return jsonify({"error": "Title and content required"}), 400
+
+    ann = Announcement(
+        title=title,
+        content=content,
+        department_id=department_id,
+        author_id=current_user.id,
+        is_pinned=is_pinned,
+        is_global=is_global,
+    )
+    db.session.add(ann)
+    db.session.commit()
+    return jsonify({"announcement": {"id": ann.id, "title": ann.title}})
+
+
+@admin_bp.route("/announcements/<ann_id>/delete", methods=["POST"])
+def delete_admin_announcement(ann_id: str):
+    ann = Announcement.query.get_or_404(ann_id)
+    ann.is_deleted = True
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@admin_bp.route("/departments/<dept_id>/update", methods=["POST"])
+def update_department(dept_id: str):
+    dept = Department.query.get_or_404(dept_id)
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+    dept.name = name
+    dept.icon = data.get("icon", dept.icon)
+    storage_gb = data.get("storage_limit_gb")
+    if storage_gb:
+        dept.storage_limit_gb = int(storage_gb)
+    db.session.commit()
+    return jsonify({"department": {"id": dept.id, "name": dept.name}})
+
+
+@admin_bp.route("/departments/<dept_id>/toggle", methods=["POST"])
+def toggle_department(dept_id: str):
+    dept = Department.query.get_or_404(dept_id)
+    dept.is_active = not dept.is_active
+    db.session.commit()
+    return jsonify({"is_active": dept.is_active})
+

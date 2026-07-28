@@ -2,6 +2,13 @@
    PGURUKUL — Dashboard Layout CSS
    ================================================================ */
 
+/* ── Lock scroll to the shell, not the page ──────────────────── */
+html:has(.app-shell),
+body:has(.app-shell) {
+  overflow: hidden;
+  height: 100%;
+}
+
 /* ── App Shell ────────────────────────────────────────────────── */
 .app-shell {
   display: flex;

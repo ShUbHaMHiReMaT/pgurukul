@@ -197,6 +197,23 @@
   </div>
 </div>
 
-{% block extra_js %}{% endblock %}
+<!-- Toast container (base.html body block is fully overridden) -->
+<div id="toast-container"></div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <script>window._flashMessages = {{ messages | tojson }};</script>
+  {% endif %}
+{% endwith %}
+
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+<script>
+  if (window._flashMessages) {
+    window._flashMessages.forEach(([cat, msg]) => {
+      const typeMap = {error:'error',danger:'error',success:'success',warning:'warning',info:'info'};
+      showToast(msg, typeMap[cat] || 'info');
+    });
+  }
+</script>
 {% endblock %}

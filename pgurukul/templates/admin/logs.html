@@ -1,0 +1,63 @@
+{% extends "admin/layout.html" %}
+{% block title %}System Logs{% endblock %}
+{% block page_title %}📜 System Logs{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<form method="GET" action="{{ url_for('admin.logs') }}" class="flex gap-3 mb-5" style="flex-wrap:wrap;">
+  <input type="search" name="q" value="{{ search }}" class="form-control" placeholder="Search logs…" style="width:240px;"/>
+  <select name="action" class="form-control" style="width:180px;" onchange="this.form.submit()">
+    <option value="">All Actions</option>
+    {% for a in action_types %}
+    <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a.replace('_',' ').title() }}</option>
+    {% endfor %}
+  </select>
+  <input type="date" name="date" value="{{ date_filter }}" class="form-control" style="width:160px;" onchange="this.form.submit()"/>
+  <button type="submit" class="btn btn-secondary">🔍 Filter</button>
+  <a href="{{ url_for('admin.logs') }}" class="btn btn-ghost">✕ Clear</a>
+</form>
+
+<div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Department</th>
+        <th>Resource</th>
+        <th>Details</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="white-space:nowrap;">{{ log.created_at.strftime('%b %d %H:%M:%S') }}</td>
+        <td>{{ log.user.username if log.user else 'System' }}</td>
+        <td>
+          <span class="action-badge {{ 'login' if 'login' in log.action else 'upload' if 'upload' in log.action else 'delete' if 'delet' in log.action else '' }}">
+            {{ log.action.replace('_',' ') }}
+          </span>
+        </td>
+        <td>{{ log.department.name if log.department else '—' }}</td>
+        <td class="db-table-cell">{{ log.resource_type or '—' }}</td>
+        <td class="db-table-cell" style="max-width:200px;">{{ log.details or '—' }}</td>
+        <td style="font-size:0.75rem;color:var(--color-text-3);">{{ log.ip_address or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--color-text-3);">No logs found</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-2 mt-5">
+  {% if page > 1 %}<a href="?page={{ page-1 }}&q={{ search }}&action={{ action_filter }}&date={{ date_filter }}" class="btn btn-secondary btn-sm">← Prev</a>{% endif %}
+  <span style="font-size:0.875rem;color:var(--color-text-2);">Page {{ page }} of {{ total_pages }} ({{ total_rows }} entries)</span>
+  {% if page < total_pages %}<a href="?page={{ page+1 }}&q={{ search }}&action={{ action_filter }}&date={{ date_filter }}" class="btn btn-secondary btn-sm">Next →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

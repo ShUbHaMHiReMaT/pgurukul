@@ -1,0 +1,83 @@
+{% extends "admin/layout.html" %}
+{% block title %}Announcements{% endblock %}
+{% block page_title %}📢 Announcements{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-3 mb-6">
+  <button class="btn btn-primary" onclick="openModal('modal-ann')">+ New Announcement</button>
+</div>
+
+<div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>Title</th><th>Department</th><th>Author</th><th>Pinned</th><th>Global</th><th>Date</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for ann in announcements %}
+      <tr id="ann-row-{{ ann.id }}">
+        <td style="font-weight:600;">{{ ann.title }}</td>
+        <td>{{ ann.department.name if ann.department else 'Global' }}</td>
+        <td>{{ ann.author.username if ann.author else 'System' }}</td>
+        <td>{{ '📌' if ann.is_pinned else '—' }}</td>
+        <td>{{ '🌍' if ann.is_global else '—' }}</td>
+        <td>{{ ann.created_at.strftime('%b %d, %Y') }}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);"
+                  onclick="deleteAnn('{{ ann.id }}')">🗑</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--color-text-3);">No announcements</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal-overlay hidden" id="modal-ann" onclick="if(event.target===this)closeModal('modal-ann')">
+  <div class="modal">
+    <div class="modal-header"><h3>+ New Announcement</h3><button class="btn btn-ghost btn-icon" onclick="closeModal('modal-ann')">✕</button></div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" id="ann-title" class="form-control" placeholder="Announcement title"/></div>
+      <div class="form-group"><label class="form-label">Content *</label><textarea id="ann-content" class="form-control" rows="5" placeholder="Write your announcement…"></textarea></div>
+      <div class="form-group">
+        <label class="form-label">Department (leave empty for global)</label>
+        <select id="ann-dept" class="form-control">
+          <option value="">🌍 All Departments (Global)</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}">{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex gap-4">
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="ann-pinned" style="accent-color:var(--color-primary);"/> 📌 Pin</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ann')">Cancel</button>
+      <button class="btn btn-primary" onclick="createAnn()">Post Announcement</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function createAnn() {
+  const title = document.getElementById('ann-title').value.trim();
+  const content = document.getElementById('ann-content').value.trim();
+  const dept_id = document.getElementById('ann-dept').value;
+  const is_pinned = document.getElementById('ann-pinned').checked;
+  const is_global = !dept_id;
+  if (!title || !content) return showToast('Title and content required', 'error');
+  const r = await apiFetch('/admin/announcements/create', {
+    method: 'POST', body: JSON.stringify({ title, content, is_pinned, is_global, department_id: dept_id || null }),
+  });
+  if (r.announcement) { showToast('Posted!', 'success'); location.reload(); }
+  else showToast(r.error || 'Failed', 'error');
+}
+
+async function deleteAnn(id) {
+  if (!confirm('Delete this announcement?')) return;
+  const r = await apiFetch(`/admin/announcements/${id}/delete`, { method: 'POST' });
+  if (r.ok) { document.getElementById(`ann-row-${id}`)?.remove(); showToast('Deleted', 'success'); }
+}
+</script>
+{% endblock %}
