@@ -1,5 +1,9 @@
-"""File management routes."""
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, send_file, abort
+"""File management routes — upload, download, rename, delete, versioning."""
+import os
+from flask import (
+    Blueprint, render_template, request, jsonify,
+    redirect, url_for, flash, send_file, abort, current_app
+)
 from flask_login import login_required, current_user
 
 from app import db
@@ -13,8 +17,10 @@ from backend.utils.validators import sanitize_text
 files_bp = Blueprint("files", __name__)
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
 def _check_dept(dept_id: str) -> Department:
-    dept = Department.query.get(dept_id)
+    dept = db.session.get(Department, dept_id)
     if not dept:
         abort(404)
     if not current_user.is_super_admin and current_user.department_id != dept_id:
@@ -22,15 +28,16 @@ def _check_dept(dept_id: str) -> Department:
     return dept
 
 
+# ── Views ─────────────────────────────────────────────────────────────────────
+
 @files_bp.route("/<dept_id>")
 @login_required
 def files_view(dept_id: str):
     dept = _check_dept(dept_id)
     folder = request.args.get("folder", "/")
-    search = request.args.get("q", "")
+    search = request.args.get("q", "").strip()
 
     q = File.query.filter_by(department_id=dept_id, is_deleted=False)
-
     if search:
         q = q.filter(File.name.ilike(f"%{search}%"))
     else:
@@ -38,11 +45,13 @@ def files_view(dept_id: str):
 
     files = q.order_by(File.created_at.desc()).all()
 
-    # Build folder list from file paths
-    all_paths = db.session.query(File.folder_path).filter_by(
-        department_id=dept_id, is_deleted=False
-    ).distinct().all()
-    folders = sorted(set(p[0] for p in all_paths if p[0] != folder))
+    all_paths = (
+        db.session.query(File.folder_path)
+        .filter_by(department_id=dept_id, is_deleted=False)
+        .distinct()
+        .all()
+    )
+    folders = sorted({p[0] for p in all_paths if p[0] != folder})
 
     return render_template(
         "dashboard/files.html",
@@ -55,6 +64,8 @@ def files_view(dept_id: str):
     )
 
 
+# ── Upload ────────────────────────────────────────────────────────────────────
+
 @files_bp.route("/<dept_id>/upload", methods=["POST"])
 @login_required
 def upload(dept_id: str):
@@ -64,7 +75,10 @@ def upload(dept_id: str):
         return jsonify({"error": "No file in request."}), 400
 
     file = request.files["file"]
-    folder = sanitize_text(request.form.get("folder", "/"), 500)
+    if not file or not file.filename:
+        return jsonify({"error": "Empty file."}), 400
+
+    folder      = sanitize_text(request.form.get("folder", "/"), 500)
     description = sanitize_text(request.form.get("description", ""), 500)
     change_note = sanitize_text(request.form.get("change_note", ""), 200)
 
@@ -72,7 +86,7 @@ def upload(dept_id: str):
         file=file,
         department_id=dept_id,
         uploader_id=current_user.id,
-        folder_path=folder,
+        folder_path=folder or "/",
         description=description,
         change_note=change_note,
     )
@@ -83,70 +97,7 @@ def upload(dept_id: str):
     return jsonify({"file": f_record.to_dict()}), 201
 
 
-@files_bp.route("/<dept_id>/files/<file_id>/versions")
-@login_required
-def file_versions(dept_id: str, file_id: str):
-    _check_dept(dept_id)
-    f = File.query.filter_by(id=file_id, department_id=dept_id).first_or_404()
-    versions = FileVersion.query.filter_by(file_id=file_id).order_by(FileVersion.version_number.desc()).all()
-    return jsonify({
-        "file": f.to_dict(),
-        "versions": [v.to_dict() for v in versions],
-    })
-
-
-@files_bp.route("/<dept_id>/files/<file_id>/restore/<version_id>", methods=["POST"])
-@login_required
-def restore(dept_id: str, file_id: str, version_id: str):
-    _check_dept(dept_id)
-    f, err = restore_version(file_id, version_id, current_user.id, dept_id)
-    if err:
-        return jsonify({"error": err}), 400
-    return jsonify({"file": f.to_dict()})
-
-
-@files_bp.route("/<dept_id>/files/<file_id>/delete", methods=["POST"])
-@login_required
-def delete(dept_id: str, file_id: str):
-    dept = _check_dept(dept_id)
-
-    # Only uploader, dept lead, or admin can delete
-    f = File.query.filter_by(id=file_id, department_id=dept_id).first_or_404()
-    if (f.uploader_id != current_user.id
-            and not current_user.is_super_admin
-            and not current_user.is_department_lead):
-        return jsonify({"error": "Not authorized."}), 403
-
-    err = delete_file(file_id, current_user.id, dept_id)
-    if err:
-        return jsonify({"error": err}), 400
-    return jsonify({"ok": True})
-
-
-@files_bp.route("/<dept_id>/files/<file_id>/rename", methods=["POST"])
-@login_required
-def rename(dept_id: str, file_id: str):
-    _check_dept(dept_id)
-    data = request.get_json(silent=True) or {}
-    new_name = sanitize_text(data.get("name", ""), 255)
-    if not new_name:
-        return jsonify({"error": "New name required."}), 400
-
-    err = rename_file(file_id, new_name, current_user.id, dept_id)
-    if err:
-        return jsonify({"error": err}), 400
-    return jsonify({"ok": True})
-
-
-@files_bp.route("/<dept_id>/files/<file_id>/favorite", methods=["POST"])
-@login_required
-def toggle_favorite(dept_id: str, file_id: str):
-    _check_dept(dept_id)
-    f = File.query.filter_by(id=file_id, department_id=dept_id, is_deleted=False).first_or_404()
-    f.is_favorite = not f.is_favorite
-    db.session.commit()
-    return jsonify({"is_favorite": f.is_favorite})
-
+# ── Download & Serve ──────────────────────────────────────────────────────────
 
 @files_bp.route("/<dept_id>/files/<file_id>/download")
 @login_required
@@ -164,13 +115,98 @@ def download(dept_id: str, file_id: str):
         details=f.name,
     )
 
-    if f.storage_url:
-        from flask import redirect
+    if current_app.config.get("USE_R2_STORAGE") and f.storage_url:
+        # Redirect to R2 presigned URL
+        url = storage_service.get_presigned_url(f.storage_key)
+        if url:
+            return redirect(url)
         return redirect(f.storage_url)
 
-    # Local fallback
-    import os
-    full_path = os.path.join(
-        current_user._sa_instance_state.session_id,  # placeholder
+    # Local storage — serve directly
+    file_path = storage_service.get_file_path(f.storage_key)
+    if not os.path.exists(file_path):
+        abort(404)
+    return send_file(
+        file_path,
+        download_name=f.original_name,
+        as_attachment=True,
+        mimetype=f.mime_type or "application/octet-stream",
     )
-    abort(404)
+
+
+@files_bp.route("/serve/<path:storage_key>")
+@login_required
+def serve_file(storage_key: str):
+    """Serve a locally stored file inline (for previews/images)."""
+    file_path = storage_service.get_file_path(storage_key)
+    if not os.path.exists(file_path):
+        abort(404)
+    return send_file(file_path)
+
+
+# ── File Actions ──────────────────────────────────────────────────────────────
+
+@files_bp.route("/<dept_id>/files/<file_id>/versions")
+@login_required
+def file_versions(dept_id: str, file_id: str):
+    _check_dept(dept_id)
+    f = File.query.filter_by(id=file_id, department_id=dept_id).first_or_404()
+    versions = (
+        FileVersion.query
+        .filter_by(file_id=file_id)
+        .order_by(FileVersion.version_number.desc())
+        .all()
+    )
+    return jsonify({"file": f.to_dict(), "versions": [v.to_dict() for v in versions]})
+
+
+@files_bp.route("/<dept_id>/files/<file_id>/restore/<version_id>", methods=["POST"])
+@login_required
+def restore(dept_id: str, file_id: str, version_id: str):
+    _check_dept(dept_id)
+    f, err = restore_version(file_id, version_id, current_user.id, dept_id)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"file": f.to_dict()})
+
+
+@files_bp.route("/<dept_id>/files/<file_id>/delete", methods=["POST"])
+@login_required
+def delete(dept_id: str, file_id: str):
+    _check_dept(dept_id)
+    f = File.query.filter_by(id=file_id, department_id=dept_id).first_or_404()
+    if (
+        f.uploader_id != current_user.id
+        and not current_user.is_super_admin
+        and not current_user.is_department_lead
+    ):
+        return jsonify({"error": "Not authorized."}), 403
+
+    err = delete_file(file_id, current_user.id, dept_id)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"ok": True})
+
+
+@files_bp.route("/<dept_id>/files/<file_id>/rename", methods=["POST"])
+@login_required
+def rename(dept_id: str, file_id: str):
+    _check_dept(dept_id)
+    data     = request.get_json(silent=True) or {}
+    new_name = sanitize_text(data.get("name", ""), 255)
+    if not new_name:
+        return jsonify({"error": "New name required."}), 400
+    err = rename_file(file_id, new_name, current_user.id, dept_id)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"ok": True})
+
+
+@files_bp.route("/<dept_id>/files/<file_id>/favorite", methods=["POST"])
+@login_required
+def toggle_favorite(dept_id: str, file_id: str):
+    _check_dept(dept_id)
+    f = File.query.filter_by(id=file_id, department_id=dept_id, is_deleted=False).first_or_404()
+    f.is_favorite = not f.is_favorite
+    db.session.commit()
+    return jsonify({"is_favorite": f.is_favorite})
