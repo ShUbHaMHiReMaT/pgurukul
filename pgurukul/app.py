@@ -34,6 +34,7 @@ def create_app(env: str = None) -> Flask:
         static_folder="static",
     )
     app.config.from_object(cfg)
+    cfg.init_app(app)
 
     # ─── Jinja filters ────────────────────────────────────────────────────
     from backend.utils.validators import render_mentions
@@ -100,6 +101,16 @@ def create_app(env: str = None) -> Flask:
         if current_user.is_authenticated:
             return redirect(url_for("dashboard.index"))
         return redirect(url_for("auth.login_view"))
+
+    # ─── Loud warning if production silently fell back to SQLite ──────────
+    db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if env == "production" and db_uri.startswith("sqlite"):
+        app.logger.critical(
+            "PRODUCTION IS RUNNING ON SQLITE — DATABASE_URL is not set (or not "
+            "visible to this process). Data will NOT persist across deploys. "
+            "Set DATABASE_URL in the environment variables of THIS service "
+            "(not just the database resource) and redeploy."
+        )
 
     return app
 
