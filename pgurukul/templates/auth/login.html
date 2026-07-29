@@ -31,18 +31,18 @@
     {% endif %}
 
     <!-- Form -->
-    <form class="auth-form" method="POST" action="{{ url_for('login') }}" id="login-form" novalidate>
+    <form class="auth-form" method="POST" action="{{ url_for('auth.login_view') }}" id="login-form" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
       <div class="form-group">
-        <label class="form-label" for="username">Username</label>
+        <label class="form-label" for="email">Email address</label>
         <input
-          type="text"
-          id="username"
-          name="username"
+          type="email"
+          id="email"
+          name="email"
           class="form-control"
-          placeholder="username"
-          autocomplete="username"
+          placeholder="you@organization.com"
+          autocomplete="email"
           required
           autofocus
         />
@@ -66,11 +66,20 @@
         </div>
       </div>
 
+      <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem;cursor:pointer;color:var(--color-text-2);">
+        <input type="checkbox" name="remember" style="accent-color:var(--color-primary)"/>
+        Keep me signed in for 7 days
+      </label>
+
       <button type="submit" class="btn btn-primary w-full" id="login-btn">
         <span id="login-btn-text">Sign In →</span>
         <span id="login-spinner" class="spinner hidden" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></span>
       </button>
     </form>
+
+    <div class="auth-footer">
+      New to PGURUKUL? <a href="{{ url_for('auth.signup') }}">Join with invite code</a>
+    </div>
   </div>
 </div>
 

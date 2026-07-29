@@ -1,92 +1,165 @@
 """
-PGURUKUL — minimal login-only application.
-
-No database, no signup. A fixed set of accounts (see accounts.py) can
-log in and see a simple landing page. Everything that previously
-depended on a database (chat, files, tasks, announcements, the admin
-panel) has been removed.
+PGURUKUL — Flask Application Factory
 """
 import os
-from datetime import timedelta
+import logging
+from logging.handlers import RotatingFileHandler
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_caching import Cache
 
-from accounts import verify_login
+from config import config_map
 
+# ─── Extension Instances ─────────────────────────────────────────────────────
+db = SQLAlchemy()
+login_manager = LoginManager()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address)
+cache = Cache()
 
 
-def create_app() -> Flask:
-    app = Flask(__name__, template_folder="templates", static_folder="static")
+def create_app(env: str = None) -> Flask:
+    """Application factory."""
+    env = env or os.environ.get("FLASK_ENV", "development")
+    cfg = config_map.get(env, config_map["default"])
 
-    env = os.environ.get("FLASK_ENV", "development")
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-THIS-NOW")
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    app.config["SESSION_COOKIE_SECURE"] = env == "production"
-    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
-    app.config["WTF_CSRF_TIME_LIMIT"] = 3600
-    app.config["WTF_CSRF_SSL_STRICT"] = env == "production"
-    app.config["RATELIMIT_STORAGE_URI"] = os.environ.get("REDIS_URL", "memory://")
+    app = Flask(
+        __name__,
+        template_folder="templates",
+        static_folder="static",
+    )
+    app.config.from_object(cfg)
+    cfg.init_app(app)
 
+    # ─── Jinja filters ────────────────────────────────────────────────────
+    from backend.utils.validators import render_mentions
+    app.jinja_env.filters["render_mentions"] = render_mentions
+
+    # ─── Ensure dirs ──────────────────────────────────────────────────────
+    os.makedirs(app.config.get("UPLOAD_FOLDER", "uploads"), exist_ok=True)
+    os.makedirs(app.config.get("LOG_DIR", "logs"), exist_ok=True)
+
+    # ─── Init extensions ──────────────────────────────────────────────────
+    db.init_app(app)
+    login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    cache.init_app(app)
 
+    # Login manager settings
+    login_manager.login_view = "auth.login_view"   # matches auth_bp route name
+    login_manager.login_message = "Please log in to access this page."
+    login_manager.login_message_category = "warning"
+    login_manager.session_protection = "strong"
+
+    # ─── Logging ──────────────────────────────────────────────────────────
+    _configure_logging(app)
+
+    # ─── Register Blueprints ──────────────────────────────────────────────
+    from backend.routes.auth import auth_bp
+    from backend.routes.dashboard import dashboard_bp
+    from backend.routes.chat import chat_bp
+    from backend.routes.files import files_bp
+    from backend.routes.tasks import tasks_bp
+    from backend.routes.announcements import announcements_bp
+    from backend.routes.search import search_bp
+    from backend.routes.admin import admin_bp
+    from backend.routes.api import api_bp
+
+    app.register_blueprint(auth_bp)                               # /auth/...
+    app.register_blueprint(dashboard_bp, url_prefix="/dashboard") # /dashboard/...
+    app.register_blueprint(chat_bp, url_prefix="/chat")           # /chat/...
+    app.register_blueprint(files_bp, url_prefix="/files")         # /files/...
+    app.register_blueprint(tasks_bp, url_prefix="/tasks")         # /tasks/...
+    app.register_blueprint(announcements_bp, url_prefix="/dashboard/announcements")
+    app.register_blueprint(search_bp, url_prefix="/search")
+    app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(api_bp, url_prefix="/api")
+
+    # ─── Error Handlers ───────────────────────────────────────────────────
+    _register_error_handlers(app)
+
+    # ─── Security Headers ─────────────────────────────────────────────────
     from backend.middleware.security_headers import apply_security_headers
     app.after_request(apply_security_headers)
 
+    # ─── User Loader ──────────────────────────────────────────────────────
+    from backend.models.user import User
+
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        return db.session.get(User, user_id)
+
+    # ─── Root redirect ────────────────────────────────────────────────────
     @app.route("/")
     def root():
-        if session.get("username"):
-            return redirect(url_for("dashboard"))
-        return redirect(url_for("login"))
+        if current_user.is_authenticated:
+            return redirect(url_for("dashboard.index"))
+        return redirect(url_for("auth.login_view"))
 
-    @app.route("/login", methods=["GET", "POST"])
-    @limiter.limit("10 per minute")
-    def login():
-        if session.get("username"):
-            return redirect(url_for("dashboard"))
-
-        error = None
-        if request.method == "POST":
-            username = request.form.get("username", "").strip().lower()
-            password = request.form.get("password", "")
-            account = verify_login(username, password)
-            if account:
-                session.clear()
-                session["username"] = username
-                session.permanent = True
-                return redirect(url_for("dashboard"))
-            error = "Invalid username or password."
-
-        return render_template("login.html", error=error)
-
-    @app.route("/logout")
-    def logout():
-        session.clear()
-        return redirect(url_for("login"))
-
-    @app.route("/dashboard")
-    def dashboard():
-        username = session.get("username")
-        if not username:
-            return redirect(url_for("login"))
-        from accounts import ACCOUNTS
-        account = ACCOUNTS[username]
-        return render_template(
-            "dashboard.html",
-            username=username,
-            role=account["role"],
-            display_name=account["display_name"],
+    # ─── Loud warning if a real deployment silently fell back to SQLite ────
+    # Checked independent of FLASK_ENV since a missing/misconfigured
+    # FLASK_ENV was itself a source of confusion here — RENDER is set by
+    # Render on every service regardless of FLASK_ENV.
+    db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    on_render = bool(os.environ.get("RENDER"))
+    if (env == "production" or on_render) and db_uri.startswith("sqlite"):
+        app.logger.critical(
+            "RUNNING ON SQLITE — DATABASE_URL is not set (or not visible to "
+            "this process). Data will NOT persist across deploys. Set "
+            "DATABASE_URL in the environment variables of THIS service "
+            "(not just the database resource) and redeploy."
         )
+
+    return app
+
+
+def _configure_logging(app: Flask) -> None:
+    level_str = app.config.get("LOG_LEVEL", "INFO")
+    level = getattr(logging, level_str.upper(), logging.INFO)
+    fmt = logging.Formatter(
+        "[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    log_file = os.path.join(app.config.get("LOG_DIR", "logs"), "pgurukul.log")
+    try:
+        fh = RotatingFileHandler(log_file, maxBytes=5_000_000, backupCount=5)
+        fh.setFormatter(fmt)
+        fh.setLevel(level)
+        app.logger.addHandler(fh)
+    except Exception:
+        pass  # Ignore log file errors in dev
+
+    sh = logging.StreamHandler()
+    sh.setFormatter(fmt)
+    sh.setLevel(level)
+
+    app.logger.setLevel(level)
+    app.logger.addHandler(sh)
+    logging.getLogger("werkzeug").setLevel(logging.WARNING)
+
+
+def _register_error_handlers(app: Flask) -> None:
+    @app.errorhandler(400)
+    def bad_request(e):
+        return render_template("errors/400.html"), 400
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("errors/403.html"), 403
 
     @app.errorhandler(404)
     def not_found(e):
         return render_template("errors/404.html"), 404
+
+    @app.errorhandler(413)
+    def too_large(e):
+        return render_template("errors/413.html"), 413
 
     @app.errorhandler(429)
     def rate_limited(e):
@@ -94,6 +167,5 @@ def create_app() -> Flask:
 
     @app.errorhandler(500)
     def server_error(e):
+        app.logger.error(f"500 error: {e}")
         return render_template("errors/500.html"), 500
-
-    return app

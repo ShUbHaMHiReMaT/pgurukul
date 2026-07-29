@@ -158,6 +158,33 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.add('hidden'));
 });
 
+// ── Notification Polling ─────────────────────────────────────────
+let _notifPollInterval = null;
+
+function startNotifPolling() {
+  if (_notifPollInterval) return;
+  _notifPollInterval = setInterval(async () => {
+    const data = await apiFetch('/api/notifications');
+    const bell = document.getElementById('notif-bell');
+    if (!bell) return;
+
+    const dot = bell.querySelector('.notif-dot');
+    const sidebarBadge = document.querySelector('.sidebar-badge');
+
+    if (data.unread_count > 0) {
+      if (!dot) {
+        const d = document.createElement('span');
+        d.className = 'notif-dot';
+        bell.appendChild(d);
+      }
+      if (sidebarBadge) sidebarBadge.textContent = data.unread_count;
+    } else {
+      if (dot) dot.remove();
+      if (sidebarBadge) sidebarBadge.remove();
+    }
+  }, 15000); // Poll every 15s
+}
+
 // ── Format utilities ─────────────────────────────────────────────
 function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
@@ -218,6 +245,8 @@ function openLightbox(src) {
 
 // ── Init ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  startNotifPolling();
+
   // Auto-resize textareas
   document.querySelectorAll('textarea').forEach(ta => {
     ta.addEventListener('input', () => {
