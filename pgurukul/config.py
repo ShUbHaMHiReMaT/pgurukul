@@ -11,9 +11,19 @@ if os.path.exists(ENV_PATH):
     load_dotenv(ENV_PATH, override=True)
 
 
+def _get_db_uri():
+    """Helper to dynamically resolve Postgres or fallback to SQLite."""
+    raw = os.environ.get('DATABASE_URL', '')
+    if raw.startswith('postgres://'):
+        raw = raw.replace('postgres://', 'postgresql://', 1)
+    return raw or f'sqlite:///{os.path.join(BASE_DIR, "pgurukul.db")}'
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-CHANGE-THIS-NOW')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_DATABASE_URI = _get_db_uri()
+    
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_recycle': 299,
         'pool_pre_ping': True,
@@ -59,14 +69,6 @@ class Config:
     LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', UPLOAD_FOLDER)
 
     ITEMS_PER_PAGE = 25
-
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        """Resolve database URI dynamically at runtime."""
-        raw = os.environ.get('DATABASE_URL', '')
-        if raw.startswith('postgres://'):
-            raw = raw.replace('postgres://', 'postgresql://', 1)
-        return raw or f'sqlite:///{os.path.join(BASE_DIR, "pgurukul.db")}'
 
     @staticmethod
     def init_app(app):
