@@ -63,12 +63,41 @@ def create_app(env: str = None) -> Flask:
     # ─── Create tables + seed fixed accounts on every boot ─────────────────
     # Idempotent — safe to run every time. Exists so hosting tiers with no
     # shell access (e.g. Render free tier) never need a manual setup step.
+    app.config["BOOTSTRAP_ERROR"] = None
     with app.app_context():
         from backend.db_bootstrap import bootstrap_database
         try:
             bootstrap_database(app, db, log=app.logger.info)
-        except Exception:
+        except Exception as e:
             app.logger.exception("Database bootstrap failed")
+            import traceback
+            app.config["BOOTSTRAP_ERROR"] = traceback.format_exc()
+
+    # ─── Unauthenticated diagnostic page ────────────────────────────────────
+    # Visit /health directly in a browser — no log access needed to see
+    # whether the database actually has tables/accounts and whether the
+    # boot-time bootstrap succeeded.
+    @app.route("/health")
+    def health():
+        import sqlalchemy as sa
+        info = {
+            "database_uri_dialect": db.engine.dialect.name,
+            "bootstrap_error": app.config.get("BOOTSTRAP_ERROR"),
+        }
+        try:
+            inspector = sa.inspect(db.engine)
+            tables = sorted(inspector.get_table_names())
+            info["tables"] = tables
+            if "users" in tables:
+                with db.engine.connect() as conn:
+                    info["user_count"] = conn.execute(sa.text("SELECT COUNT(*) FROM users")).scalar()
+                    info["usernames"] = [
+                        r[0] for r in conn.execute(sa.text("SELECT username FROM users ORDER BY username"))
+                    ]
+        except Exception as e:
+            info["inspect_error"] = str(e)
+        from flask import jsonify
+        return jsonify(info)
 
     # ─── Register Blueprints ──────────────────────────────────────────────
     from backend.routes.auth import auth_bp
