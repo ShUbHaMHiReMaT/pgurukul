@@ -3,24 +3,12 @@ import os
 from datetime import timedelta
 from dotenv import load_dotenv
 
-# Always load .env from the project root
+# Always load .env from project root if present
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, ".env")
 
-print("=" * 50)
-print("Loading .env from:", ENV_PATH)
-print("Exists:", os.path.exists(ENV_PATH))
-
 if os.path.exists(ENV_PATH):
-    with open(ENV_PATH, "r", encoding="utf-8") as f:
-        print("\n===== .env CONTENT =====")
-        print(f.read())
-        print("========================\n")
-
-load_dotenv(ENV_PATH, override=True)
-
-print("DATABASE_URL:", os.environ.get("DATABASE_URL"))
-print("=" * 50)
+    load_dotenv(ENV_PATH, override=True)
 
 
 class Config:
@@ -33,22 +21,13 @@ class Config:
         'max_overflow': 20,
     }
 
-    # Resolve Render.com postgres:// → postgresql://
-    _raw_db = os.environ.get('DATABASE_URL', '')
-    if _raw_db.startswith('postgres://'):
-        _raw_db = _raw_db.replace('postgres://', 'postgresql://', 1)
-
-    SQLALCHEMY_DATABASE_URI = _raw_db or f'sqlite:///{os.path.join(BASE_DIR, "pgurukul.db")}'
-
-    print("SQLALCHEMY_DATABASE_URI:", SQLALCHEMY_DATABASE_URI)
-
     # Folders
-    UPLOAD_FOLDER    = os.path.join(BASE_DIR, 'uploads')
-    LOG_DIR          = os.path.join(BASE_DIR, 'logs')
-    LOG_LEVEL        = os.environ.get('LOG_LEVEL', 'INFO')
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    LOG_DIR = os.path.join(BASE_DIR, 'logs')
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
     # Session / cookies
-    SESSION_COOKIE_SECURE   = False
+    SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
@@ -80,6 +59,14 @@ class Config:
     LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', UPLOAD_FOLDER)
 
     ITEMS_PER_PAGE = 25
+
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        """Resolve database URI dynamically at runtime."""
+        raw = os.environ.get('DATABASE_URL', '')
+        if raw.startswith('postgres://'):
+            raw = raw.replace('postgres://', 'postgresql://', 1)
+        return raw or f'sqlite:///{os.path.join(BASE_DIR, "pgurukul.db")}'
 
     @staticmethod
     def init_app(app):
