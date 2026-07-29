@@ -102,13 +102,17 @@ def create_app(env: str = None) -> Flask:
             return redirect(url_for("dashboard.index"))
         return redirect(url_for("auth.login_view"))
 
-    # ─── Loud warning if production silently fell back to SQLite ──────────
+    # ─── Loud warning if a real deployment silently fell back to SQLite ────
+    # Checked independent of FLASK_ENV since a missing/misconfigured
+    # FLASK_ENV was itself a source of confusion here — RENDER is set by
+    # Render on every service regardless of FLASK_ENV.
     db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
-    if env == "production" and db_uri.startswith("sqlite"):
+    on_render = bool(os.environ.get("RENDER"))
+    if (env == "production" or on_render) and db_uri.startswith("sqlite"):
         app.logger.critical(
-            "PRODUCTION IS RUNNING ON SQLITE — DATABASE_URL is not set (or not "
-            "visible to this process). Data will NOT persist across deploys. "
-            "Set DATABASE_URL in the environment variables of THIS service "
+            "RUNNING ON SQLITE — DATABASE_URL is not set (or not visible to "
+            "this process). Data will NOT persist across deploys. Set "
+            "DATABASE_URL in the environment variables of THIS service "
             "(not just the database resource) and redeploy."
         )
 
