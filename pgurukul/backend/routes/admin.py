@@ -1,5 +1,6 @@
 """Admin control panel routes — super admin only."""
 import json
+import os
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
@@ -335,13 +336,21 @@ def db_viewer():
             "col_count": len(inspector.get_columns(t)),
         })
 
-    db_version = "PostgreSQL"
+    db_version = "Unknown"
     db_size = "—"
+    dialect = db.engine.dialect.name
     try:
-        raw_version = db.session.execute(text("SHOW server_version")).scalar() or ""
-        db_version = f"PostgreSQL {raw_version.split()[0]}"
-        size_bytes = db.session.execute(text("SELECT pg_database_size(current_database())")).scalar()
-        db_size = f"{round(size_bytes / (1024 * 1024), 1)} MB"
+        if dialect == "postgresql":
+            raw_version = db.session.execute(text("SHOW server_version")).scalar() or ""
+            db_version = f"PostgreSQL {raw_version.split()[0]}"
+            size_bytes = db.session.execute(text("SELECT pg_database_size(current_database())")).scalar()
+            db_size = f"{round(size_bytes / (1024 * 1024), 1)} MB"
+        elif dialect == "sqlite":
+            import sqlite3
+            db_version = f"SQLite {sqlite3.sqlite_version}"
+            db_path = db.engine.url.database
+            if db_path and os.path.exists(db_path):
+                db_size = f"{round(os.path.getsize(db_path) / (1024 * 1024), 1)} MB"
     except Exception:
         pass
 

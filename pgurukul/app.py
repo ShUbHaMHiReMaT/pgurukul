@@ -60,6 +60,16 @@ def create_app(env: str = None) -> Flask:
     # ─── Logging ──────────────────────────────────────────────────────────
     _configure_logging(app)
 
+    # ─── Create tables + seed fixed accounts on every boot ─────────────────
+    # Idempotent — safe to run every time. Exists so hosting tiers with no
+    # shell access (e.g. Render free tier) never need a manual setup step.
+    with app.app_context():
+        from backend.db_bootstrap import bootstrap_database
+        try:
+            bootstrap_database(app, db, log=app.logger.info)
+        except Exception:
+            app.logger.exception("Database bootstrap failed")
+
     # ─── Register Blueprints ──────────────────────────────────────────────
     from backend.routes.auth import auth_bp
     from backend.routes.dashboard import dashboard_bp
