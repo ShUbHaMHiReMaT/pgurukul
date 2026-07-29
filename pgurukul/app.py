@@ -35,6 +35,10 @@ def create_app(env: str = None) -> Flask:
     )
     app.config.from_object(cfg)
 
+    # ─── Jinja filters ────────────────────────────────────────────────────
+    from backend.utils.validators import render_mentions
+    app.jinja_env.filters["render_mentions"] = render_mentions
+
     # ─── Ensure dirs ──────────────────────────────────────────────────────
     os.makedirs(app.config.get("UPLOAD_FOLDER", "uploads"), exist_ok=True)
     os.makedirs(app.config.get("LOG_DIR", "logs"), exist_ok=True)

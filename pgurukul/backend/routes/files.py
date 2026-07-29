@@ -138,6 +138,18 @@ def download(dept_id: str, file_id: str):
 @login_required
 def serve_file(storage_key: str):
     """Serve a locally stored file inline (for previews/images)."""
+    # Avatars are low-sensitivity and shown across department boundaries
+    # (admin panel, global announcements, etc.) — anyone authenticated may view them.
+    basename = storage_key.rsplit("/", 1)[-1]
+    if not basename.startswith("avatar_"):
+        # Otherwise this key must belong to a real File record — enforce
+        # department isolation the same way the download route does.
+        f = File.query.filter_by(storage_key=storage_key, is_deleted=False).first()
+        if not f:
+            abort(404)
+        if not current_user.is_super_admin and current_user.department_id != f.department_id:
+            abort(403)
+
     file_path = storage_service.get_file_path(storage_key)
     if not os.path.exists(file_path):
         abort(404)

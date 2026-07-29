@@ -5,7 +5,7 @@
 {% block content %}
 <div class="flex items-center gap-3 mb-5">
   <a href="{{ url_for('admin.db_viewer') }}" class="btn btn-secondary btn-sm">← Back to Tables</a>
-  <span style="color:var(--color-text-3);font-size:0.875rem;">{{ total_rows }} rows</span>
+  <span style="color:var(--color-text-3);font-size:0.875rem;">{{ total }} rows</span>
 </div>
 
 {% if rows %}
@@ -21,7 +21,7 @@
     <tbody>
       {% for row in rows %}
       <tr>
-        {% for val in row %}
+        {% for val in row.values() %}
         <td class="db-table-cell">{{ val if val is not none else '—' }}</td>
         {% endfor %}
       </tr>

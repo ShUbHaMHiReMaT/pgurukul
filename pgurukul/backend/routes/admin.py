@@ -322,15 +322,35 @@ ALLOWED_TABLES = [
 @admin_bp.route("/database")
 def db_viewer():
     inspector = inspect(db.engine)
-    tables = [t for t in inspector.get_table_names() if t in ALLOWED_TABLES]
-    table_info = {}
-    for t in tables:
+    table_names = [t for t in inspector.get_table_names() if t in ALLOWED_TABLES]
+    tables = []
+    for t in table_names:
         try:
             count = db.session.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar()
-            table_info[t] = {"count": count}
         except Exception:
-            table_info[t] = {"count": "?"}
-    return render_template("admin/db_viewer.html", tables=tables, table_info=table_info)
+            count = 0
+        tables.append({
+            "name": t,
+            "row_count": count,
+            "col_count": len(inspector.get_columns(t)),
+        })
+
+    db_version = "PostgreSQL"
+    db_size = "—"
+    try:
+        raw_version = db.session.execute(text("SHOW server_version")).scalar() or ""
+        db_version = f"PostgreSQL {raw_version.split()[0]}"
+        size_bytes = db.session.execute(text("SELECT pg_database_size(current_database())")).scalar()
+        db_size = f"{round(size_bytes / (1024 * 1024), 1)} MB"
+    except Exception:
+        pass
+
+    return render_template(
+        "admin/db_viewer.html",
+        tables=tables,
+        db_version=db_version,
+        db_size=db_size,
+    )
 
 
 @admin_bp.route("/database/<table_name>")
@@ -430,30 +450,32 @@ def storage_viewer():
     stats = storage_service.get_storage_stats()
 
     # Per-department storage
-    dept_storage = (
+    dept_rows = (
         db.session.query(
-            Department.name,
-            Department.id,
-            func.sum(File.size_bytes).label("total_bytes"),
+            Department,
+            func.coalesce(func.sum(File.size_bytes), 0).label("total_bytes"),
             func.count(File.id).label("file_count"),
         )
-        .join(File, File.department_id == Department.id, isouter=True)
-        .filter(db.or_(File.is_deleted == False, File.id == None))
-        .group_by(Department.id, Department.name)
+        .outerjoin(File, db.and_(File.department_id == Department.id, File.is_deleted == False))
+        .group_by(Department.id)
+        .order_by(Department.name)
         .all()
     )
 
-    # Largest files
-    largest = (
-        File.query
-        .filter_by(is_deleted=False)
-        .order_by(File.size_bytes.desc())
-        .limit(20)
-        .all()
-    )
+    dept_stats = []
+    for dept, used_bytes, file_count in dept_rows:
+        limit_bytes = dept.storage_limit_bytes or 1
+        dept_stats.append({
+            "icon": dept.icon,
+            "name": dept.name,
+            "used_bytes": used_bytes or 0,
+            "limit_gb": dept.storage_limit_gb,
+            "file_count": file_count or 0,
+            "pct": round(((used_bytes or 0) / limit_bytes) * 100, 1),
+        })
 
     # Recent uploads
-    recent = (
+    recent_files = (
         File.query
         .filter_by(is_deleted=False)
         .order_by(File.created_at.desc())
@@ -463,10 +485,11 @@ def storage_viewer():
 
     return render_template(
         "admin/storage_viewer.html",
-        stats=stats,
-        dept_storage=dept_storage,
-        largest=largest,
-        recent=recent,
+        total_used_bytes=stats.get("total_bytes", 0),
+        total_files=stats.get("total_objects", 0),
+        storage_type="Cloudflare R2" if stats.get("backend") == "r2" else "Local Disk",
+        dept_stats=dept_stats,
+        recent_files=recent_files,
     )
 
 

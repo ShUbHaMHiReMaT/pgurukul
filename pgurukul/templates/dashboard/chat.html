@@ -66,7 +66,7 @@
           {% elif msg.message_type == 'image' %}
           <img src="{{ msg.file_url }}" class="chat-image" alt="{{ msg.file_name }}" onclick="openLightbox(this.src)"/>
           {% else %}
-          <div class="message-content">{{ msg.content | replace('@', '<span class="mention">@') | replace(' ', '</span> ') | safe if '@' in msg.content else msg.content }}</div>
+          <div class="message-content">{{ msg.content | render_mentions }}</div>
           {% endif %}
         </div>
 

@@ -122,15 +122,12 @@ def profile():
 def members():
     """View department members."""
     dept = current_user.department
-    if not dept and not current_user.is_super_admin:
+    if not dept:
+        if current_user.is_super_admin:
+            flash("Super admins aren't tied to a department — use the Admin Panel to manage users.", "info")
+            return redirect(url_for("admin.users"))
         flash("You are not part of a department.", "warning")
         return redirect(url_for("dashboard.index"))
-
-    if current_user.is_super_admin:
-        departments = Department.query.filter_by(is_active=True).all()
-        return render_template("dashboard/members.html",
-                               departments=departments,
-                               unread_count=get_unread_count(current_user.id))
 
     members = dept.members
     return render_template("dashboard/members.html",

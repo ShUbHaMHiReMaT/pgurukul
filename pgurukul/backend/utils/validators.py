@@ -1,10 +1,12 @@
 """Input validators."""
 import re
 from typing import Optional
+from markupsafe import Markup, escape
 
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.-]{3,50}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MENTION_RE = re.compile(r"@([a-zA-Z0-9_.\-]+)")
 
 
 def validate_username(username: str) -> Optional[str]:
@@ -46,6 +48,18 @@ def sanitize_text(text: str, max_length: int = 10000) -> str:
     import bleach
     cleaned = bleach.clean(text, tags=[], attributes={}, strip=True)
     return cleaned[:max_length].strip()
+
+
+def render_mentions(text: str) -> Markup:
+    """Escape user content, then wrap @mentions in a highlight span.
+
+    Content is escaped FIRST so no user-supplied HTML/JS can ever reach
+    the page unescaped — only the mention span markup we add ourselves
+    is trusted.
+    """
+    safe_text = str(escape(text or ""))
+    highlighted = MENTION_RE.sub(r'<span class="mention">@\1</span>', safe_text)
+    return Markup(highlighted)
 
 
 def validate_file_path(path: str) -> Optional[str]:

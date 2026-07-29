@@ -54,7 +54,7 @@
         <tbody>
           {% for log in recent_logs %}
           <tr>
-            <td>{{ log.username or 'System' }}</td>
+            <td>{{ log.user.username if log.user else 'System' }}</td>
             <td><span class="action-badge {{ 'login' if 'login' in log.action else 'upload' if 'upload' in log.action else 'delete' if 'delet' in log.action else 'admin' if 'admin' in log.action else '' }}">{{ log.action.replace('_',' ') }}</span></td>
             <td class="db-table-cell">{{ log.details or log.resource_type or '-' }}</td>
             <td>{{ log.created_at.strftime('%m/%d %H:%M') }}</td>

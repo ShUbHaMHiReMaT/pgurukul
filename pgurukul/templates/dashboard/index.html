@@ -49,10 +49,10 @@
       {% for log in recent_activity %}
       <div class="list-item">
         <div class="avatar avatar-sm" style="background:linear-gradient(135deg,var(--color-primary),var(--color-accent));">
-          {{ log.username[0].upper() if log.username else '?' }}
+          {{ log.user.username[0].upper() if log.user else '?' }}
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:0.875rem;font-weight:500;">{{ log.username or 'System' }}</div>
+          <div style="font-size:0.875rem;font-weight:500;">{{ log.user.username if log.user else 'System' }}</div>
           <div style="font-size:0.8rem;color:var(--color-text-3);">{{ log.action.replace('_',' ') }}</div>
         </div>
         <div style="font-size:0.75rem;color:var(--color-text-3);">{{ log.created_at.strftime('%H:%M') }}</div>

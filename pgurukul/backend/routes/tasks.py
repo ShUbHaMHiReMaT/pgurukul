@@ -182,6 +182,7 @@ def update_task(dept_id: str, task_id: str):
 @tasks_bp.route("/<dept_id>/<task_id>/delete", methods=["POST"])
 @login_required
 def delete_task(dept_id: str, task_id: str):
+    _check_dept(dept_id)
     if not current_user.is_super_admin and not current_user.is_department_lead:
         return jsonify({"error": "Not authorized."}), 403
 
