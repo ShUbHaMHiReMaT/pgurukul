@@ -1,0 +1,3 @@
+[33me8eb516[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix production silently falling back to SQLite when DATABASE_URL is missing
+[33m2d04072[m updates
+[33mdbd6a78[m again man
