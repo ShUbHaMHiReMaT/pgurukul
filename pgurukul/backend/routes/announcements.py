@@ -88,6 +88,7 @@ def create_announcement(dept_id: str):
                 actor_username=current_user.username,
                 announcement_id=announcement.id,
                 title=title,
+                department_id=None if is_global else dept_id,
             )
 
     db.session.commit()

@@ -67,7 +67,7 @@ class AnnouncementRead(db.Model):
 class Notification(db.Model):
     __tablename__ = "notifications"
 
-    TYPES = ["mention", "task_assigned", "announcement", "file_shared", "task_completed", "system"]
+    TYPES = ["mention", "task_assigned", "announcement", "file_shared", "task_completed", "new_message", "system"]
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)

@@ -11,7 +11,7 @@ from app import db
 from backend.models.department import Department
 from backend.models.message import Message, Mention, MessageReadReceipt, TypingIndicator
 from backend.models.user import User
-from backend.services.notification_service import notify_mention, get_unread_count
+from backend.services.notification_service import notify_mention, notify_new_message, get_unread_count
 from backend.services.activity_service import log_activity
 from backend.utils.validators import sanitize_text
 from backend.middleware.auth_required import department_access_required
@@ -95,9 +95,11 @@ def send_message(dept_id: str):
     # Parse @mentions
     import re
     mentioned_usernames = re.findall(r"@([a-zA-Z0-9_.-]+)", content)
+    mentioned_user_ids = set()
     for uname in set(mentioned_usernames):
         user = User.query.filter_by(username=uname, department_id=dept_id).first()
         if user and user.id != current_user.id:
+            mentioned_user_ids.add(user.id)
             mention = Mention(
                 message_id=msg.id,
                 mentioned_user_id=user.id,
@@ -109,6 +111,20 @@ def send_message(dept_id: str):
                 actor_id=current_user.id,
                 actor_username=current_user.username,
                 message_id=msg.id,
+                department_id=dept_id,
+            )
+
+    # Notify other department members (mentioned users already got a mention notification)
+    if content:
+        for member in dept.members:
+            if member.id == current_user.id or member.id in mentioned_user_ids:
+                continue
+            notify_new_message(
+                user_id=member.id,
+                actor_id=current_user.id,
+                actor_username=current_user.username,
+                message_id=msg.id,
+                content_preview=content,
                 department_id=dept_id,
             )
 

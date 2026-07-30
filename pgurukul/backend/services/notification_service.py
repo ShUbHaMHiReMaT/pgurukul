@@ -45,7 +45,7 @@ def notify_mention(
         actor_id=actor_id,
         entity_type="message",
         entity_id=message_id,
-        entity_url=f"/dashboard/chat/{department_id}",
+        entity_url=f"/chat/{department_id}",
     )
 
 
@@ -65,7 +65,27 @@ def notify_task_assigned(
         actor_id=actor_id,
         entity_type="task",
         entity_id=task_id,
-        entity_url=f"/dashboard/tasks/{task_id}",
+        entity_url=f"/tasks/{department_id}/{task_id}",
+    )
+
+
+def notify_new_message(
+    user_id: str,
+    actor_id: str,
+    actor_username: str,
+    message_id: str,
+    content_preview: str,
+    department_id: str,
+) -> Notification:
+    return create_notification(
+        user_id=user_id,
+        notification_type="new_message",
+        title=f"{actor_username} sent a message",
+        body=content_preview[:100],
+        actor_id=actor_id,
+        entity_type="message",
+        entity_id=message_id,
+        entity_url=f"/chat/{department_id}",
     )
 
 
@@ -75,6 +95,7 @@ def notify_announcement(
     actor_username: str,
     announcement_id: str,
     title: str,
+    department_id: Optional[str] = None,
 ) -> Notification:
     return create_notification(
         user_id=user_id,
@@ -84,7 +105,7 @@ def notify_announcement(
         actor_id=actor_id,
         entity_type="announcement",
         entity_id=announcement_id,
-        entity_url="/dashboard/announcements",
+        entity_url=f"/dashboard/announcements/{department_id}" if department_id else "/dashboard/",
     )
 
 

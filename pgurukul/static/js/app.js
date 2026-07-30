@@ -162,28 +162,56 @@ document.addEventListener('click', () => {
 // ── Notification Polling ─────────────────────────────────────────
 let _notifPollInterval = null;
 
+let _lastSeenNotifId = null;
+
+async function _pollNotificationsOnce() {
+  const data = await apiFetch('/api/notifications');
+  const notifs = data.notifications || [];
+
+  // Toast-popup any notification newer than the last one we saw. On the
+  // very first poll after page load, just record a baseline instead of
+  // replaying a toast for every already-unread notification.
+  if (_lastSeenNotifId === null) {
+    _lastSeenNotifId = notifs.length ? notifs[0].id : '';
+  } else if (notifs.length && notifs[0].id !== _lastSeenNotifId) {
+    const newOnes = [];
+    for (const n of notifs) {
+      if (n.id === _lastSeenNotifId) break;
+      newOnes.push(n);
+    }
+    _lastSeenNotifId = notifs[0].id;
+    newOnes.reverse().forEach(n => {
+      showToast(n.body ? `${n.title} — ${n.body}` : n.title, 'info', 6000);
+    });
+  }
+
+  const bell = document.getElementById('notif-bell');
+  if (!bell) return;
+
+  const dot = bell.querySelector('.notif-dot');
+  const sidebarBadge = document.querySelector('.sidebar-badge');
+
+  if (data.unread_count > 0) {
+    if (!dot) {
+      const d = document.createElement('span');
+      d.className = 'notif-dot';
+      bell.appendChild(d);
+    }
+    if (sidebarBadge) sidebarBadge.textContent = data.unread_count;
+  } else {
+    if (dot) dot.remove();
+    if (sidebarBadge) sidebarBadge.remove();
+  }
+}
+
 function startNotifPolling() {
   if (_notifPollInterval) return;
-  _notifPollInterval = setInterval(async () => {
-    const data = await apiFetch('/api/notifications');
-    const bell = document.getElementById('notif-bell');
-    if (!bell) return;
-
-    const dot = bell.querySelector('.notif-dot');
-    const sidebarBadge = document.querySelector('.sidebar-badge');
-
-    if (data.unread_count > 0) {
-      if (!dot) {
-        const d = document.createElement('span');
-        d.className = 'notif-dot';
-        bell.appendChild(d);
-      }
-      if (sidebarBadge) sidebarBadge.textContent = data.unread_count;
-    } else {
-      if (dot) dot.remove();
-      if (sidebarBadge) sidebarBadge.remove();
-    }
-  }, 15000); // Poll every 15s
+  // Only poll on authenticated pages (dashboard/admin layouts) — the
+  // notif bell only exists there, so this also avoids hammering
+  // /api/notifications (and the resulting 401 redirect) on the login page.
+  if (!document.getElementById('notif-bell')) return;
+  _pollNotificationsOnce();
+  _notifPollInterval = setInterval(_pollNotificationsOnce, 15000);
 }
 
 // ── Format utilities ─────────────────────────────────────────────
