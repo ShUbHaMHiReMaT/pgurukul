@@ -330,7 +330,29 @@
   max-width: 280px;
 }
 
+/* Mobile sidebar toggle button (admin.css doesn't load dashboard.css, so
+   define full base styling here rather than relying on that file) */
+.admin-topbar .sidebar-toggle {
+  display: none;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  color: var(--color-text);
+  margin-right: var(--space-2);
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
-  .admin-sidebar { display: none; }
+  .admin-sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--transition, 0.2s ease);
+  }
+  .admin-sidebar.open { transform: translateX(0); }
   .admin-main { margin-left: 0; }
+  .admin-topbar .sidebar-toggle { display: flex; }
 }

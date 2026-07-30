@@ -14,7 +14,7 @@
 
 <div class="admin-shell">
   <!-- Sidebar -->
-  <aside class="admin-sidebar">
+  <aside class="admin-sidebar" id="sidebar">
     <a class="admin-brand" href="{{ url_for('admin.admin_index') }}">
       <div class="admin-brand-icon">🛡</div>
       <div>
@@ -68,6 +68,11 @@
   <div class="admin-main">
     <!-- Topbar -->
     <div class="admin-topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
       <div class="admin-page-title">{% block page_title %}Admin{% endblock %}</div>
       <div style="margin-left:auto;display:flex;align-items:center;gap:var(--space-3);">
         <div style="font-size:0.8125rem;color:var(--color-text-3);">

@@ -433,6 +433,11 @@ body:has(.app-shell) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-card { padding: var(--space-4); }
+}
+
 /* ── Dropdown ─────────────────────────────────────────────────── */
 .dropdown {
   position: relative;

@@ -41,6 +41,7 @@ function toggleSidebar() {
 
 // Close sidebar on overlay click (mobile)
 document.addEventListener('click', (e) => {
+  if (e.target.closest('.sidebar-toggle')) return; // don't fight the toggle button's own click
   const sb = document.getElementById('sidebar');
   if (!sb) return;
   if (sb.classList.contains('open') && !sb.contains(e.target)) {
