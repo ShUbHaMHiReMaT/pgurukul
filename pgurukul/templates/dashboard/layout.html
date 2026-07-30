@@ -34,8 +34,8 @@
         Dashboard
       </a>
 
-      {% if current_user.department %}
-      <a href="{{ url_for('chat.chat_view', dept_id=current_user.department.id) }}"
+      {% if nav_dept %}
+      <a href="{{ url_for('chat.chat_view', dept_id=nav_dept.id) }}"
          class="sidebar-item {% if 'chat' in request.endpoint %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -43,7 +43,7 @@
         Chat
       </a>
 
-      <a href="{{ url_for('files.files_view', dept_id=current_user.department.id) }}"
+      <a href="{{ url_for('files.files_view', dept_id=nav_dept.id) }}"
          class="sidebar-item {% if 'files' in request.endpoint %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
@@ -60,7 +60,7 @@
         Shared Drive ↗
       </a>
 
-      <a href="{{ url_for('tasks.tasks_view', dept_id=current_user.department.id) }}"
+      <a href="{{ url_for('tasks.tasks_view', dept_id=nav_dept.id) }}"
          class="sidebar-item {% if 'tasks' in request.endpoint %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -68,7 +68,7 @@
         Tasks
       </a>
 
-      <a href="{{ url_for('announcements.announcements_view', dept_id=current_user.department.id) }}"
+      <a href="{{ url_for('announcements.announcements_view', dept_id=nav_dept.id) }}"
          class="sidebar-item {% if 'announcements' in request.endpoint %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 17H2a3 3 0 000 6h20M2 8l10-7 10 7M2 8v9h20V8"/>
@@ -76,6 +76,7 @@
         Announcements
       </a>
 
+      {% if current_user.department %}
       <a href="{{ url_for('dashboard.members') }}"
          class="sidebar-item {% if request.endpoint == 'dashboard.members' %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -84,6 +85,7 @@
         </svg>
         Members
       </a>
+      {% endif %}
       {% endif %}
 
       <!-- Search -->

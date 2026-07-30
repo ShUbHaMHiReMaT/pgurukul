@@ -141,6 +141,24 @@ def create_app(env: str = None) -> Flask:
             return redirect(url_for("dashboard.index"))
         return redirect(url_for("auth.login_view"))
 
+    # ─── Nav department for sidebar ─────────────────────────────────────────
+    # Super admins aren't tied to one department (so they keep the
+    # platform-wide overview on /dashboard/), but the sidebar still needs
+    # somewhere to point Chat/Files/Tasks/Announcements — give them the
+    # first active department as their working department for navigation.
+    # The routes already let super_admins into any department; this just
+    # gives the sidebar a link to click.
+    @app.context_processor
+    def inject_nav_dept():
+        if not current_user.is_authenticated:
+            return {}
+        if current_user.department:
+            return {"nav_dept": current_user.department}
+        if current_user.is_super_admin:
+            from backend.models.department import Department
+            return {"nav_dept": Department.query.filter_by(is_active=True).order_by(Department.created_at).first()}
+        return {}
+
     # ─── Loud warning if a real deployment silently fell back to SQLite ────
     # Checked independent of FLASK_ENV since a missing/misconfigured
     # FLASK_ENV was itself a source of confusion here — RENDER is set by
