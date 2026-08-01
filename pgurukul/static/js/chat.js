@@ -67,7 +67,7 @@ function appendMessage(msg, isOwn = false) {
 
   const initials = (msg.display_name || msg.username || '?')[0].toUpperCase();
   const avatarHtml = msg.avatar_url
-    ? `<img src="${msg.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`
+    ? `<img src="${msg.avatar_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`
     : initials;
 
   const replyHtml = msg.parent_content ? `
@@ -79,7 +79,7 @@ function appendMessage(msg, isOwn = false) {
   const contentHtml = msg.is_deleted
     ? '<div class="message-content" style="color:var(--color-text-3);font-style:italic;">This message was deleted</div>'
     : msg.message_type === 'image'
-    ? `<img src="${msg.file_url}" class="chat-image" alt="${escHtml(msg.file_name || '')}" onclick="openLightbox(this.src)"/>`
+    ? `<img src="${msg.file_url}" class="chat-image" alt="${escHtml(msg.file_name || '')}" loading="lazy" onclick="openLightbox(this.src)"/>`
     : msg.message_type === 'file'
     ? `<a href="${msg.file_url}" class="file-message" target="_blank"><div class="file-icon-box">📎</div><div><div class="file-msg-name">${escHtml(msg.file_name || '')}</div><div class="file-msg-size">Download</div></div></a>`
     : `<div class="message-content">${renderMentions(msg.content)}</div>`;
@@ -253,7 +253,7 @@ async function pollOnline() {
   list.innerHTML = data.users.map(u => `
     <div class="online-member">
       <div class="avatar-wrap">
-        <div class="avatar avatar-sm">${u.avatar_url ? `<img src="${u.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>` : (u.display_name || u.username)[0].toUpperCase()}</div>
+        <div class="avatar avatar-sm">${u.avatar_url ? `<img src="${u.avatar_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>` : (u.display_name || u.username)[0].toUpperCase()}</div>
         ${u.online ? '<div class="online-dot"></div>' : ''}
       </div>
       <div>
@@ -264,42 +264,7 @@ async function pollOnline() {
   `).join('');
 }
 
-// ── File Upload via Chat ──────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const fileInput = document.getElementById('file-input');
-  if (fileInput) {
-    fileInput.addEventListener('change', async () => {
-      if (!fileInput.files.length) return;
-      const file = fileInput.files[0];
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', '/chat');
-      formData.append('description', 'Shared via chat');
-
-      showToast(`Uploading ${file.name}…`, 'info');
-
-      const res = await fetch(`/files/${DEPT_ID}/upload`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCsrf() },
-        body: formData,
-      });
-      const data = await res.json();
-
-      if (data.file) {
-        // Send message with file reference
-        await apiFetch(`/chat/${DEPT_ID}/send`, {
-          method: 'POST',
-          body: JSON.stringify({ content: `[Shared file: ${file.name}]`, file_id: data.file.id }),
-        });
-        showToast('File shared!', 'success');
-        pollMessages();
-      } else {
-        showToast(data.error || 'Upload failed', 'error');
-      }
-      fileInput.value = '';
-    });
-  }
-
   // Input events
   const chatInput = document.getElementById('chat-input');
   if (chatInput) {

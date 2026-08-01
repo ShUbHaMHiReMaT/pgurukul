@@ -12,6 +12,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_caching import Cache
+from flask_compress import Compress
 
 from config import config_map
 
@@ -21,6 +22,7 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address)
 cache = Cache()
+compress = Compress()
 
 
 def create_app(env: str = None) -> Flask:
@@ -50,6 +52,10 @@ def create_app(env: str = None) -> Flask:
     csrf.init_app(app)
     limiter.init_app(app)
     cache.init_app(app)
+    # Gzip/Brotli-compresses HTML/CSS/JS/JSON responses on the way out —
+    # the safe, transparent version of "minify" (shrinks the same bytes
+    # over the wire without rewriting page content, so nothing can break).
+    compress.init_app(app)
 
     # Login manager settings
     login_manager.login_view = "auth.login_view"   # matches auth_bp route name

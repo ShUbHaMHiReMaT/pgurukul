@@ -47,7 +47,7 @@
         <div class="message-avatar-col">
           <div class="avatar avatar-sm">
             {% if msg.sender and msg.sender.avatar_url %}
-            <img src="{{ msg.sender.avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+            <img src="{{ msg.sender.avatar_url }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
             {% else %}
             {{ (msg.sender.username[0].upper() if msg.sender else '?') }}
             {% endif %}
@@ -72,7 +72,7 @@
             </div>
           </a>
           {% elif msg.message_type == 'image' %}
-          <img src="{{ msg.file_url }}" class="chat-image" alt="{{ msg.file_name }}" onclick="openLightbox(this.src)"/>
+          <img src="{{ msg.file_url }}" class="chat-image" alt="{{ msg.file_name }}" loading="lazy" onclick="openLightbox(this.src)"/>
           {% else %}
           <div class="message-content">{{ msg.content | render_mentions }}</div>
           {% endif %}
@@ -118,12 +118,6 @@
       <div class="mention-popup hidden" id="mention-popup"></div>
 
       <div class="chat-input-row">
-        <!-- Attach file -->
-        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('file-input').click()" title="Attach file" type="button" style="flex-shrink:0;">
-          📎
-        </button>
-        <input type="file" id="file-input" hidden accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.gif,.zip,.csv,.xlsx"/>
-
         <textarea
           class="chat-textarea"
           id="chat-input"
@@ -155,7 +149,7 @@
         <div class="avatar-wrap">
           <div class="avatar avatar-sm">
             {% if member.avatar_url %}
-            <img src="{{ member.avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+            <img src="{{ member.avatar_url }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
             {% else %}
             {{ member.username[0].upper() }}
             {% endif %}
