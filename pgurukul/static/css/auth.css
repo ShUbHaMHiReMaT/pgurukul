@@ -25,7 +25,7 @@
 .auth-blob-1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(91,94,244,0.20) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(194,65,12,0.20) 0%, transparent 70%);
   top: -100px;
   left: -100px;
   animation-delay: 0s;
@@ -34,7 +34,7 @@
 .auth-blob-2 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(15,118,110,0.15) 0%, transparent 70%);
   bottom: -80px;
   right: -80px;
   animation-delay: -4s;
@@ -183,8 +183,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  background: linear-gradient(135deg, rgba(91,94,244,0.10), rgba(6,182,212,0.08));
-  border: 1px solid rgba(91,94,244,0.20);
+  background: linear-gradient(135deg, rgba(194,65,12,0.10), rgba(15,118,110,0.08));
+  border: 1px solid rgba(194,65,12,0.20);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   font-size: 0.875rem;

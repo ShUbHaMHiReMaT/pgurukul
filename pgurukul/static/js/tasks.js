@@ -56,7 +56,7 @@ async function openTaskDetail(taskId) {
 
   const body = document.getElementById('detail-task-body');
   const title = document.getElementById('detail-task-title');
-  body.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>';
+  body.innerHTML = '<div style="text-align:center;padding:40px;"><div class="animal-loader"><span>🐇</span><span>🦊</span><span>🐢</span></div></div>';
 
   const data = await apiFetch(`/tasks/${DEPT_ID}/${taskId}`);
   if (!data.task) {

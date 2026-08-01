@@ -97,7 +97,7 @@
 }
 
 .admin-nav-item.active {
-  background: rgba(91,94,244,0.20);
+  background: rgba(194,65,12,0.20);
   color: #fff;
 }
 
@@ -213,7 +213,7 @@
 
 .action-badge.login    { background: rgba(16,185,129,0.12); color: var(--color-success); }
 .action-badge.logout   { background: rgba(245,158,11,0.12); color: var(--color-warning); }
-.action-badge.upload   { background: rgba(91,94,244,0.12);  color: var(--color-primary); }
+.action-badge.upload   { background: rgba(194,65,12,0.12);  color: var(--color-primary); }
 .action-badge.delete   { background: rgba(239,68,68,0.12);  color: var(--color-danger); }
 .action-badge.admin    { background: rgba(239,68,68,0.12);  color: var(--color-danger); }
 

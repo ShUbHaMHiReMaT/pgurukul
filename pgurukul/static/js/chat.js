@@ -130,7 +130,7 @@ function scrollToMessage(id) {
   const el = document.querySelector(`[data-msg-id="${id}"]`);
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.style.background = 'rgba(91,94,244,0.10)';
+    el.style.background = 'rgba(194,65,12,0.10)';
     setTimeout(() => el.style.background = '', 1500);
   }
 }

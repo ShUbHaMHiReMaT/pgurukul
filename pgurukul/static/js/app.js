@@ -12,6 +12,37 @@
   updateThemeIcon(saved);
 })();
 
+// ── Page Navigation Loader ──────────────────────────────────────────
+// This app does full page reloads (server-rendered, no SPA), so there's
+// a gap between "user clicks a link" and "new page appears" with zero
+// feedback. Flash the runners immediately on click so it doesn't feel dead.
+(function initPageLoader() {
+  const loader = document.getElementById('page-loader');
+  if (!loader) return;
+
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+    if (a.target === '_blank' || a.hasAttribute('download')) return;
+    try {
+      if (new URL(href, window.location.href).origin !== window.location.origin) return;
+    } catch (err) { return; }
+    loader.classList.add('active');
+  });
+
+  document.addEventListener('submit', (e) => {
+    if (!e.defaultPrevented && e.target.tagName === 'FORM') {
+      loader.classList.add('active');
+    }
+  });
+
+  // Restore state cleanly when a page is served from bfcache (e.g. back button).
+  window.addEventListener('pageshow', () => loader.classList.remove('active'));
+})();
+
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'dark' ? 'light' : 'dark';

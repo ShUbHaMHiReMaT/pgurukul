@@ -89,7 +89,7 @@ async function uploadFile(file, queueEl) {
 async function showVersions(fileId, fileName) {
   openModal('modal-versions');
   const body = document.getElementById('versions-body');
-  body.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>';
+  body.innerHTML = '<div style="text-align:center;padding:40px;"><div class="animal-loader"><span>🐇</span><span>🦊</span><span>🐢</span></div></div>';
 
   const data = await apiFetch(`/files/${DEPT_ID}/files/${fileId}/versions`);
 

@@ -23,6 +23,10 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-CHANGE-THIS-NOW')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = _get_db_uri()
+
+    # Let browsers cache CSS/JS/images between page loads instead of
+    # re-fetching them on every dashboard/chat/admin navigation.
+    SEND_FILE_MAX_AGE_DEFAULT = timedelta(days=7)
     
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_recycle': 299,
