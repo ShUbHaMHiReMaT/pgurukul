@@ -11,6 +11,8 @@ NAMED_ADMINS = [
     ("shubham", "shubham@pgurukul.local", "iWMzv1AxEau$"),
     ("shreyas", "shreyas@pgurukul.local", "0G5TSP45L8S&"),
     ("suyog", "suyog@pgurukul.local", "Pr4fk1bfyWE$"),
+    ("ompatil", "ompatil@pgurukul.local", "H7vLpQ2mXtR$"),
+    ("ankita", "ankita@pgurukul.local", "B4wNzK9jFcY#"),
 ]
 NAMED_INTERNS = [
     ("vaish", "vaish@pgurukul.local", "JLAR7NhC3YN*"),

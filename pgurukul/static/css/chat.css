@@ -9,6 +9,14 @@
   position: relative;
 }
 
+/* .page-content padding drops from 24px to 16px at the 768px breakpoint
+   (see dashboard.css) — this negative margin must match it exactly, or
+   the chat shell bleeds past its container on mobile. */
+.chat-shell-bleed { margin: -24px; }
+@media (max-width: 768px) {
+  .chat-shell-bleed { margin: -16px; }
+}
+
 /* ── Chat Messages Area ───────────────────────────────────────── */
 .chat-main {
   flex: 1;
@@ -418,4 +426,19 @@
 
 @media (max-width: 900px) {
   .chat-sidebar { display: none; }
+}
+
+/* ── Mobile: message actions & input ──────────────────────────── */
+/* Reply/pin/delete were opacity:0 until :hover, which never fires on
+   touch — making them effectively unreachable on mobile. Show them
+   at reduced opacity by default on touch devices instead. */
+@media (hover: none) {
+  .message-actions { opacity: 0.85; position: static; box-shadow: none; margin-top: 4px; }
+}
+
+@media (max-width: 768px) {
+  /* Inputs under 16px trigger iOS Safari's auto-zoom on focus, which
+     makes the whole chat feel broken on a phone. */
+  .chat-textarea { font-size: 16px; }
+  .chat-input-area { padding: var(--space-3); }
 }

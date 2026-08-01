@@ -163,6 +163,27 @@ document.addEventListener('click', () => {
 let _notifPollInterval = null;
 
 let _lastSeenNotifId = null;
+let _notifAudioCtx = null;
+
+function _playNotifSound() {
+  try {
+    _notifAudioCtx = _notifAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _notifAudioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (err) {
+    // Audio can fail silently (autoplay policy, unsupported browser) — never block notifications on it.
+  }
+}
 
 async function _pollNotificationsOnce() {
   const data = await apiFetch('/api/notifications');
@@ -180,6 +201,7 @@ async function _pollNotificationsOnce() {
       newOnes.push(n);
     }
     _lastSeenNotifId = notifs[0].id;
+    _playNotifSound();
     newOnes.reverse().forEach(n => {
       showToast(n.body ? `${n.title} — ${n.body}` : n.title, 'info', 6000);
     });
@@ -211,7 +233,7 @@ function startNotifPolling() {
   // /api/notifications (and the resulting 401 redirect) on the login page.
   if (!document.getElementById('notif-bell')) return;
   _pollNotificationsOnce();
-  _notifPollInterval = setInterval(_pollNotificationsOnce, 15000);
+  _notifPollInterval = setInterval(_pollNotificationsOnce, 8000);
 }
 
 // ── Format utilities ─────────────────────────────────────────────

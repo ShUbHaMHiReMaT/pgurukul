@@ -127,7 +127,9 @@ def toggle_pin(dept_id: str, ann_id: str):
     if not current_user.is_super_admin and not current_user.is_department_lead:
         return jsonify({"error": "Not authorized."}), 403
 
-    ann = Announcement.query.filter_by(id=ann_id, department_id=dept_id).first_or_404()
+    # Global announcements have department_id=None, so match on id alone —
+    # access to this dept's announcements page already confirms visibility.
+    ann = Announcement.query.get_or_404(ann_id)
     ann.is_pinned = not ann.is_pinned
     db.session.commit()
     return jsonify({"is_pinned": ann.is_pinned})
@@ -140,7 +142,9 @@ def delete_announcement(dept_id: str, ann_id: str):
     if not current_user.is_super_admin and not current_user.is_department_lead:
         return jsonify({"error": "Not authorized."}), 403
 
-    ann = Announcement.query.filter_by(id=ann_id, department_id=dept_id).first_or_404()
+    # Global announcements have department_id=None, so match on id alone —
+    # access to this dept's announcements page already confirms visibility.
+    ann = Announcement.query.get_or_404(ann_id)
     ann.is_deleted = True
     db.session.commit()
     log_activity(
