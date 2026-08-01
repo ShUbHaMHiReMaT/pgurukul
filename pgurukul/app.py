@@ -158,12 +158,19 @@ def create_app(env: str = None) -> Flask:
     def inject_nav_dept():
         if not current_user.is_authenticated:
             return {}
+        from backend.models.department import Department
+        # Chat is organization-wide: every user's sidebar Chat link points
+        # at the exact same department, always — this used to resolve
+        # differently for regular users (their own department) vs. admins
+        # (whichever department was created first), which is why admins
+        # and interns ended up looking at two different chat rooms.
+        chat_dept = Department.query.filter_by(is_active=True).order_by(Department.created_at).first()
+        ctx = {"chat_dept": chat_dept}
         if current_user.department:
-            return {"nav_dept": current_user.department}
-        if current_user.is_super_admin:
-            from backend.models.department import Department
-            return {"nav_dept": Department.query.filter_by(is_active=True).order_by(Department.created_at).first()}
-        return {}
+            ctx["nav_dept"] = current_user.department
+        elif current_user.is_super_admin:
+            ctx["nav_dept"] = chat_dept
+        return ctx
 
     # ─── Loud warning if a real deployment silently fell back to SQLite ────
     # Checked independent of FLASK_ENV since a missing/misconfigured

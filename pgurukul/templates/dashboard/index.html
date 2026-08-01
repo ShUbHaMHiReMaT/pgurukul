@@ -27,10 +27,10 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon stat-icon-warning">📁</div>
+    <div class="stat-icon stat-icon-warning">💬</div>
     <div>
-      <div class="stat-value">{{ total_files }}</div>
-      <div class="stat-label">Files Uploaded</div>
+      <div class="stat-value">{{ total_messages }}</div>
+      <div class="stat-label">Chat Messages</div>
     </div>
   </div>
   <div class="stat-card">
@@ -94,38 +94,11 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon stat-icon-warning">📁</div>
-    <div>
-      <div class="stat-value">{{ recent_files | length }}</div>
-      <div class="stat-label">Recent Files</div>
-    </div>
-  </div>
-  <div class="stat-card">
     <div class="stat-icon stat-icon-accent">✅</div>
     <div>
       <div class="stat-value">{{ active_tasks | length }}</div>
       <div class="stat-label">Active Tasks</div>
     </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon stat-icon-success">💾</div>
-    <div>
-      <div class="stat-value">{{ '%.1f' | format(dept.storage_used_bytes / 1073741824) }}GB</div>
-      <div class="stat-label">Storage Used</div>
-    </div>
-  </div>
-</div>
-
-<!-- Storage progress -->
-<div class="card mb-4" style="padding:var(--space-4) var(--space-5);">
-  <div class="flex items-center justify-between" style="margin-bottom:8px;">
-    <span style="font-size:0.875rem;font-weight:600;color:var(--color-text-2);">Storage Usage</span>
-    <span style="font-size:0.875rem;font-weight:700;">
-      {{ '%.1f' | format(dept.storage_used_bytes / 1073741824) }} / {{ dept.storage_limit_gb }} GB
-    </span>
-  </div>
-  <div class="progress-bar">
-    <div class="progress-bar-fill" style="width:{{ [100, (dept.storage_used_bytes / dept.storage_limit_bytes * 100)] | min }}%;"></div>
   </div>
 </div>
 
@@ -154,31 +127,6 @@
     </div>
     {% endif %}
 
-    <!-- Recent Files -->
-    <div class="card">
-      <div class="flex items-center justify-between mb-4">
-        <h3 style="font-size:1rem;">📁 Recent Files</h3>
-        <a href="{{ url_for('files.files_view', dept_id=dept.id) }}" style="font-size:0.8rem;color:var(--color-primary);">See all →</a>
-      </div>
-      {% for file in recent_files %}
-      <div class="list-item">
-        <div style="font-size:1.5rem;">
-          {% if file.is_image %}🖼️{% elif file.is_pdf %}📄{% elif file.extension in ['docx','doc'] %}📝{% elif file.extension in ['xlsx','csv'] %}📊{% else %}📁{% endif %}
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.875rem;font-weight:500;" class="truncate">{{ file.name }}</div>
-          <div style="font-size:0.75rem;color:var(--color-text-3);">v{{ file.version }} · {{ file.size_mb }}MB</div>
-        </div>
-        <a href="{{ url_for('files.download', dept_id=dept.id, file_id=file.id) }}" class="btn btn-ghost btn-sm">↓</a>
-      </div>
-      {% else %}
-      <div class="empty-state" style="padding:var(--space-6);">
-        <div class="empty-state-icon">📂</div>
-        <p>No files uploaded yet</p>
-        <a href="{{ url_for('files.files_view', dept_id=dept.id) }}" class="btn btn-primary btn-sm">Upload File</a>
-      </div>
-      {% endfor %}
-    </div>
   </div>
 
   <!-- Right: Tasks + Quick Actions -->
@@ -188,8 +136,7 @@
     <div class="card">
       <h3 style="font-size:1rem;margin-bottom:var(--space-4);">⚡ Quick Actions</h3>
       <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-        <a href="{{ url_for('chat.chat_view', dept_id=dept.id) }}" class="btn btn-secondary">💬 Open Chat</a>
-        <a href="{{ url_for('files.files_view', dept_id=dept.id) }}" class="btn btn-secondary">📁 Browse Files</a>
+        <a href="{{ url_for('chat.chat_view', dept_id=chat_dept.id) }}" class="btn btn-secondary">💬 Open Chat</a>
         <a href="{{ url_for('tasks.tasks_view', dept_id=dept.id) }}" class="btn btn-secondary">✅ View Tasks</a>
         <a href="{{ url_for('announcements.announcements_view', dept_id=dept.id) }}" class="btn btn-secondary">📢 Announcements</a>
       </div>

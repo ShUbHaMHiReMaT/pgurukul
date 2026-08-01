@@ -425,6 +425,8 @@ body:has(.app-shell) {
     top: 0;
     z-index: var(--z-modal);
     transform: translateX(-100%);
+    will-change: transform;
+    transition: transform var(--transition, 250ms) cubic-bezier(0.4, 0, 0.2, 1);
   }
   .sidebar.open { transform: translateX(0); }
   .sidebar-toggle { display: flex; }

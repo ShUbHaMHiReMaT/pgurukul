@@ -47,10 +47,6 @@
          class="admin-nav-item {% if 'db' in request.endpoint %}active{% endif %}">
         🗄️ Database
       </a>
-      <a href="{{ url_for('admin.storage_viewer') }}"
-         class="admin-nav-item {% if request.endpoint == 'admin.storage_viewer' %}active{% endif %}">
-        ☁️ Storage
-      </a>
       <a href="{{ url_for('admin.logs') }}"
          class="admin-nav-item {% if request.endpoint == 'admin.logs' %}active{% endif %}">
         📜 System Logs

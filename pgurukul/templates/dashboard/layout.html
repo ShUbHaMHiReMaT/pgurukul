@@ -34,8 +34,8 @@
         Dashboard
       </a>
 
-      {% if nav_dept %}
-      <a href="{{ url_for('chat.chat_view', dept_id=nav_dept.id) }}"
+      {% if chat_dept %}
+      <a href="{{ url_for('chat.chat_view', dept_id=chat_dept.id) }}"
          class="sidebar-item {% if 'chat' in request.endpoint %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -51,7 +51,9 @@
         </svg>
         Shared Drive ↗
       </a>
+      {% endif %}
 
+      {% if nav_dept %}
       <a href="{{ url_for('tasks.tasks_view', dept_id=nav_dept.id) }}"
          class="sidebar-item {% if 'tasks' in request.endpoint %}active{% endif %}">
         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

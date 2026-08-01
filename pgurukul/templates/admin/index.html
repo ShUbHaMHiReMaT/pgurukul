@@ -14,24 +14,12 @@
     <div class="admin-stat-label">Departments</div>
   </div>
   <div class="admin-stat">
-    <div class="admin-stat-num">{{ stats.total_files }}</div>
-    <div class="admin-stat-label">Files</div>
-  </div>
-  <div class="admin-stat">
     <div class="admin-stat-num">{{ stats.total_tasks }}</div>
     <div class="admin-stat-label">Tasks</div>
   </div>
   <div class="admin-stat">
     <div class="admin-stat-num">{{ stats.total_messages }}</div>
     <div class="admin-stat-label">Messages</div>
-  </div>
-  <div class="admin-stat">
-    <div class="admin-stat-num">
-      {% if stats.storage and stats.storage.total_bytes %}
-        {{ '%.1f'|format(stats.storage.total_bytes / 1073741824) }}GB
-      {% else %}0GB{% endif %}
-    </div>
-    <div class="admin-stat-label">Storage Used</div>
   </div>
 </div>
 

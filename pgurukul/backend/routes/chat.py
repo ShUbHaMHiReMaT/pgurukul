@@ -20,11 +20,14 @@ chat_bp = Blueprint("chat", __name__)
 
 
 def _get_dept_or_403(dept_id: str) -> Department:
+    # Chat is organization-wide now: every active user shares the exact
+    # same room regardless of which department they belong to (that was
+    # the "interns see a different chat than admins" bug — admins with
+    # no department were being routed to a different room than interns).
+    # Department membership no longer gates chat access at all.
     dept = Department.query.get(dept_id)
     if not dept:
         abort(404)
-    if not current_user.is_super_admin and current_user.department_id != dept_id:
-        abort(403)
     return dept
 
 
@@ -32,7 +35,7 @@ def _get_dept_or_403(dept_id: str) -> Department:
 @login_required
 def chat_view(dept_id: str):
     dept = _get_dept_or_403(dept_id)
-    members = dept.members
+    members = User.query.filter_by(is_active=True).all()
     messages = (
         Message.query
         .filter_by(department_id=dept_id, is_deleted=False)
@@ -97,7 +100,7 @@ def send_message(dept_id: str):
     mentioned_usernames = re.findall(r"@([a-zA-Z0-9_.-]+)", content)
     mentioned_user_ids = set()
     for uname in set(mentioned_usernames):
-        user = User.query.filter_by(username=uname, department_id=dept_id).first()
+        user = User.query.filter_by(username=uname, is_active=True).first()
         if user and user.id != current_user.id:
             mentioned_user_ids.add(user.id)
             mention = Mention(
@@ -114,9 +117,10 @@ def send_message(dept_id: str):
                 department_id=dept_id,
             )
 
-    # Notify other department members (mentioned users already got a mention notification)
+    # Notify everyone else in the (org-wide) chat — mentioned users already
+    # got a mention notification above, so skip them here.
     if content:
-        for member in dept.members:
+        for member in User.query.filter_by(is_active=True).all():
             if member.id == current_user.id or member.id in mentioned_user_ids:
                 continue
             notify_new_message(
@@ -223,15 +227,10 @@ def typing_users(dept_id: str):
 @chat_bp.route("/<dept_id>/online-users")
 @login_required
 def online_users(dept_id: str):
-    dept = _get_dept_or_403(dept_id)
-    # Super admins have no department_id, so they're never in dept.members —
-    # but they can chat in any department, so show them in every roster too.
-    users = list(dept.members)
-    seen_ids = {u.id for u in users}
-    for admin in User.query.filter_by(role="super_admin", is_active=True).all():
-        if admin.id not in seen_ids:
-            users.append(admin)
-            seen_ids.add(admin.id)
+    _get_dept_or_403(dept_id)
+    # Chat is org-wide — roster is every active user, not just this
+    # department's members.
+    users = User.query.filter_by(is_active=True).all()
     return jsonify({
         "users": [
             {
@@ -308,7 +307,6 @@ def member_autocomplete(dept_id: str):
     users = (
         User.query
         .filter(
-            User.department_id == dept_id,
             User.is_active == True,
             db.or_(
                 User.username.ilike(f"{q}%"),

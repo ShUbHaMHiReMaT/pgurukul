@@ -7,7 +7,7 @@ from app import db
 from backend.models.user import User
 from backend.models.department import Department
 from backend.models.announcement import Announcement, Notification, ActivityLog
-from backend.models.file import File
+from backend.models.message import Message
 from backend.models.task import Task
 from backend.services.activity_service import log_activity
 from backend.services.notification_service import get_unread_count
@@ -35,13 +35,6 @@ def index():
     }
 
     if dept:
-        ctx["recent_files"] = (
-            File.query
-            .filter_by(department_id=dept.id, is_deleted=False)
-            .order_by(File.created_at.desc())
-            .limit(5)
-            .all()
-        )
         ctx["active_tasks"] = (
             Task.query
             .filter(Task.department_id == dept.id, Task.is_deleted == False, Task.status != "completed")
@@ -64,7 +57,7 @@ def index():
         # Admin sees platform-wide stats
         ctx["total_users"] = User.query.filter_by(is_active=True).count()
         ctx["total_depts"] = Department.query.filter_by(is_active=True).count()
-        ctx["total_files"] = File.query.filter_by(is_deleted=False).count()
+        ctx["total_messages"] = Message.query.filter_by(is_deleted=False).count()
         ctx["total_tasks"] = Task.query.filter_by(is_deleted=False).count()
         ctx["recent_activity"] = (
             ActivityLog.query
