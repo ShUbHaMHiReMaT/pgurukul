@@ -9,7 +9,6 @@ let replyToId = null;
 let replyToUser = null;
 let _lastMessageId = null;
 let _pollInterval = null;
-let _typingTimeout = null;
 let _serverTime = null;
 let _isPolling = false;
 
@@ -177,6 +176,9 @@ async function pinMessage(id) {
 }
 
 // ── Long-Poll ────────────────────────────────────────────────────
+// Typing indicators ride along in the same response as messages — one
+// request stream instead of two, which frees up budget to poll twice
+// as often (1s vs 2s) at the same total request rate.
 async function pollMessages() {
   if (_isPolling) return;
   _isPolling = true;
@@ -195,6 +197,7 @@ async function pollMessages() {
     }
 
     if (data.server_time) _serverTime = data.server_time;
+    renderTypingIndicator(data.typing || []);
   } catch (e) {
     // Silently fail
   } finally {
@@ -203,20 +206,25 @@ async function pollMessages() {
 }
 
 // ── Typing indicator ─────────────────────────────────────────────
+let _typingSignalSent = false;
 function sendTypingSignal() {
+  // Was firing on every keystroke; now throttled to once per 2s while
+  // actively typing, which is all the 4s server-side cutoff needs.
+  if (_typingSignalSent) return;
+  _typingSignalSent = true;
   apiFetch(`/chat/${DEPT_ID}/typing`, { method: 'POST' });
+  setTimeout(() => { _typingSignalSent = false; }, 2000);
 }
 
-async function pollTyping() {
-  const data = await apiFetch(`/chat/${DEPT_ID}/typing-users`);
+function renderTypingIndicator(typing) {
   const indicator = document.getElementById('typing-indicator');
   const text = document.getElementById('typing-text');
-  if (!data.typing || data.typing.length === 0) {
+  if (!typing.length) {
     indicator.style.display = 'none';
     return;
   }
-  const names = data.typing.map(u => u.display_name).join(', ');
-  text.textContent = `${names} ${data.typing.length === 1 ? 'is' : 'are'} typing…`;
+  const names = typing.map(u => u.display_name).join(', ');
+  text.textContent = `${names} ${typing.length === 1 ? 'is' : 'are'} typing…`;
   indicator.style.display = 'flex';
 }
 
@@ -286,10 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     chatInput.addEventListener('input', () => {
-      // Typing signal
-      clearTimeout(_typingTimeout);
       sendTypingSignal();
-      _typingTimeout = setTimeout(() => {}, 3000);
 
       // Resize
       chatInput.style.height = 'auto';
@@ -300,12 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial scroll
   scrollToBottom(true);
 
-  // Initialize server time from last message
-  const msgs = document.querySelectorAll('.message-group[data-msg-id]');
-  // Poll every 2s
-  _pollInterval = setInterval(pollMessages, 2000);
-  // Poll typing every 2s
-  setInterval(pollTyping, 2000);
+  // Poll messages (+ typing, merged) every 1s — same total request rate
+  // as the old 2s-messages + 2s-typing split, but half the latency.
+  _pollInterval = setInterval(pollMessages, 1000);
   // Poll online every 30s
   setInterval(pollOnline, 30000);
   pollOnline();

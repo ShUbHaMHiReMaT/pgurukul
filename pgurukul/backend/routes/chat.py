@@ -224,6 +224,14 @@ def typing_users(dept_id: str):
 @login_required
 def online_users(dept_id: str):
     dept = _get_dept_or_403(dept_id)
+    # Super admins have no department_id, so they're never in dept.members —
+    # but they can chat in any department, so show them in every roster too.
+    users = list(dept.members)
+    seen_ids = {u.id for u in users}
+    for admin in User.query.filter_by(role="super_admin", is_active=True).all():
+        if admin.id not in seen_ids:
+            users.append(admin)
+            seen_ids.add(admin.id)
     return jsonify({
         "users": [
             {
@@ -233,7 +241,7 @@ def online_users(dept_id: str):
                 "avatar_url": u.avatar_url,
                 "online": u.online,
             }
-            for u in dept.members
+            for u in users
         ]
     })
 
@@ -265,9 +273,26 @@ def poll_messages(dept_id: str):
     current_user.last_seen_at = datetime.utcnow()
     db.session.commit()
 
+    # Piggyback typing indicators on this same poll — avoids a second
+    # request stream running in parallel just to check who's typing.
+    typing_cutoff = datetime.utcnow() - timedelta(seconds=4)
+    typing = (
+        TypingIndicator.query
+        .filter(
+            TypingIndicator.department_id == dept_id,
+            TypingIndicator.user_id != current_user.id,
+            TypingIndicator.updated_at >= typing_cutoff,
+        )
+        .all()
+    )
+
     return jsonify({
         "messages": [m.to_dict(current_user.id) for m in msgs],
         "server_time": datetime.utcnow().isoformat(),
+        "typing": [
+            {"username": t.user.username, "display_name": t.user.display_name or t.user.username}
+            for t in typing if t.user
+        ],
     })
 
 
