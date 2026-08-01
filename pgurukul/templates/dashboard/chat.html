@@ -13,10 +13,18 @@
 
     <!-- Pinned Messages -->
     {% for msg in pinned %}
-    <div class="pinned-bar">
+    <div class="pinned-bar" data-pinned-id="{{ msg.id }}" onclick="scrollToMessage('{{ msg.id }}')">
       <span class="pin-icon">📌</span>
       <span class="pinned-sender">{{ msg.sender.username }}</span>
       <span class="pinned-preview">{{ msg.content[:80] }}</span>
+      {% if current_user.is_super_admin or current_user.is_department_lead %}
+      <button class="msg-action-btn" style="margin-left:auto;flex-shrink:0;" title="Unpin"
+              onclick="event.stopPropagation();unpinFromBar('{{ msg.id }}')">📌✕</button>
+      {% endif %}
+      {% if current_user.is_super_admin or current_user.is_department_lead or msg.sender_id == current_user.id %}
+      <button class="msg-action-btn danger" style="flex-shrink:0;" title="Delete"
+              onclick="event.stopPropagation();deleteMessage('{{ msg.id }}')">🗑</button>
+      {% endif %}
     </div>
     {% endfor %}
 

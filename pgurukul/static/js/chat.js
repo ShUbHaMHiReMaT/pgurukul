@@ -166,13 +166,30 @@ async function deleteMessage(id) {
       const actions = el.querySelector('.message-actions');
       if (actions) actions.remove();
     }
+    // A deleted message can't stay pinned at the top either.
+    document.querySelector(`.pinned-bar[data-pinned-id="${id}"]`)?.remove();
   }
 }
 
 // ── Pin ──────────────────────────────────────────────────────────
 async function pinMessage(id) {
   const r = await apiFetch(`/chat/${DEPT_ID}/messages/${id}/pin`, { method: 'POST' });
+  if (r.pinned === undefined) return;
   showToast(r.pinned ? 'Message pinned' : 'Message unpinned', 'info');
+  if (!r.pinned) {
+    document.querySelector(`.pinned-bar[data-pinned-id="${id}"]`)?.remove();
+  }
+}
+
+async function unpinFromBar(id) {
+  const r = await apiFetch(`/chat/${DEPT_ID}/messages/${id}/pin`, { method: 'POST' });
+  if (r.pinned === false) {
+    document.querySelector(`.pinned-bar[data-pinned-id="${id}"]`)?.remove();
+    showToast('Unpinned', 'info');
+  } else if (r.pinned === true) {
+    // Was already unpinned by someone else and this toggled it back on — just refresh.
+    location.reload();
+  }
 }
 
 // ── Long-Poll ────────────────────────────────────────────────────
