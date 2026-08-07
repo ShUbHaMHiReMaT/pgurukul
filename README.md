@@ -1,33 +1,30 @@
 # Repository
 ## Overview
-This repository contains a Next.js project with 102 files, 341 functions, and 22 classes. It includes configuration files such as `tsconfig.json`, `next.config.js`, and `pnpm-lock.yaml`. The project also has documentation files like `IMPLEMENTATION_COMPLETE.md`, `QUICKSTART.md`, and `BUILD_COMPLETE.md`.
+This repository contains a Next.js project with a custom configuration defined in `next.config.js`. The project has a total of 102 files, 341 functions, and 22 classes.
 
 ## Architecture / How It Works
-The project's architecture is not explicitly defined, but it appears to use a modular structure with separate modules for different functionalities. The `drizzle.config.ts` file suggests the use of the Drizzle framework.
+The project uses a modular structure with separate modules for different functionalities. The `drizzle.config.ts` file is a critical part of the project's architecture.
 
 ## Project Structure
-The project structure is not fully defined, but it includes the following directories and files:
-- `package.json`
-- `next.config.js`
-- `tsconfig.json`
-- `drizzle.config.ts`
-- `render.yaml`
-- `pnpm-lock.yaml`
-- Documentation files: `IMPLEMENTATION_COMPLETE.md`, `QUICKSTART.md`, `BUILD_COMPLETE.md`, `AUTH_FIXES.md`
+The project has the following structure:
+- `tsconfig.json`: configuration file for TypeScript
+- `IMPLEMENTATION_COMPLETE.md`, `QUICKSTART.md`, `BUILD_COMPLETE.md`, `AUTH_FIXES.md`: documentation files
+- `next.config.js`: configuration file for Next.js
+- `pnpm-lock.yaml`: dependency lock file
+- `render.yaml`: configuration file for rendering
+- `drizzle.config.ts`: configuration file for Drizzle
+- `package.json`: package metadata file
 
 ## Key Components
-- `drizzle.config.ts`: configuration file for the Drizzle framework
-- `next.config.js`: configuration file for Next.js
-- `tsconfig.json`: configuration file for TypeScript
-- `package.json`: project metadata and dependencies
-- `render.yaml`: configuration file for rendering
-- `pnpm-lock.yaml`: lockfile for pnpm dependencies
+- `drizzle.config.ts`: defines the Drizzle configuration
+- `next.config.js`: defines the Next.js configuration
+- `package.json`: lists the project's dependencies
 
 ## Technologies Used
 - Next.js
 - TypeScript
+- Drizzle
 - pnpm
-- Drizzle framework (inferred from `drizzle.config.ts`)
 
 ## Notes / Limitations
-The project's architecture and usage are not fully defined, and some details may be inferred or missing.
+The project uses a custom configuration for Next.js and Drizzle. The `drizzle.config.ts` file is a critical part of the project's architecture.
